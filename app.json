@@ -1,18 +1,28 @@
 {
   "expo": {
-    "name": "privi-app-scaffold",
-    "slug": "privi-app-scaffold",
-    "version": "1.0.0",
+    "name": "Privi",
+    "slug": "privi-app",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "priviappscaffold",
+    "scheme": "privi",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.privi.app",
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Privi uses your location to show you nearby Member Benefits.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Privi uses your location to show you nearby Member Benefits."
+      }
     },
     "android": {
+      "package": "com.privi.app",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#6FA7A1",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -28,9 +38,15 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#6FA7A1",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 130
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Privi to access your location to show nearby Member Benefits."
         }
       ]
     ],
