@@ -7,6 +7,7 @@ export interface SubscriptionInfo {
   paymentMethodBrand: string | null;
   paymentMethodLast4: string | null;
   portalUrl: string | null;
+  deletionRequestedAt: string | null;
 }
 
 const WEBSITE_API_URL = process.env.EXPO_PUBLIC_WEBSITE_API_URL ?? 'https://privi.info';

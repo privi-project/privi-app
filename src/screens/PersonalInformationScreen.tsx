@@ -17,11 +17,17 @@ import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { ChevronLeftIcon, AccountIcon, MailIcon, MapPinIcon, CalendarIcon, CardIcon } from '@/components/NavIcons';
 import { ChangePasswordModal } from '@/components/ChangePasswordModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { fetchProfile, updateProfile, Profile } from '@/services/profile';
 import { validatePostcodePrefix } from '@/services/location';
 import { fetchSubscriptionInfo, SubscriptionInfo } from '@/services/subscription';
+import { scheduleAccountDeletion, cancelAccountDeletion } from '@/services/account';
 import { useAuthStore } from '@/store/auth';
 import { noOutline } from '@/utils/webStyles';
+
+// No dedicated "danger" token in COLORS — matches the one other spot in
+// this screen that needs one (errorText below).
+const DANGER = '#D64545';
 
 export default function PersonalInformationScreen() {
   const router = useRouter();
@@ -41,6 +47,9 @@ export default function PersonalInformationScreen() {
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
   const textColor = isDark ? COLORS.ivory : COLORS.charcoal;
@@ -126,6 +135,38 @@ export default function PersonalInformationScreen() {
       Linking.openURL(subscription.portalUrl);
     }
   };
+
+  const handleConfirmDelete = async () => {
+    setDeleteError('');
+    setDeleteBusy(true);
+    const ok = await scheduleAccountDeletion();
+    setDeleteBusy(false);
+    if (ok) {
+      setSubscription((prev) => (prev ? { ...prev, deletionRequestedAt: new Date().toISOString() } : prev));
+    } else {
+      setDeleteError("Something went wrong scheduling your deletion. Please try again.");
+    }
+  };
+
+  const handleCancelDeletion = async () => {
+    setDeleteError('');
+    setDeleteBusy(true);
+    const ok = await cancelAccountDeletion();
+    setDeleteBusy(false);
+    if (ok) {
+      setSubscription((prev) => (prev ? { ...prev, deletionRequestedAt: null } : prev));
+    } else {
+      setDeleteError('Something went wrong cancelling your deletion. Please try again.');
+    }
+  };
+
+  const deletionDateLabel = subscription?.renewalDate
+    ? new Date(subscription.renewalDate).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : 'the end of your current billing period';
 
   if (loading) {
     return (
@@ -256,6 +297,34 @@ export default function PersonalInformationScreen() {
             subColor={subColor}
           />
         ) : null}
+
+        <View style={styles.divider} />
+
+        <GoldGradientText style={styles.sectionHeading}>ACCOUNT</GoldGradientText>
+
+        {deleteError ? <Text style={styles.errorText}>{deleteError}</Text> : null}
+
+        {subscription?.deletionRequestedAt ? (
+          <View>
+            <Text style={[styles.helperText, { color: subColor, marginTop: 0 }]}>
+              Your account is scheduled for deletion on {deletionDateLabel}. You'll keep full
+              access until then.
+            </Text>
+            <Pressable onPress={handleCancelDeletion} style={styles.linkRow} disabled={deleteBusy}>
+              <GoldGradientText style={styles.link}>
+                {deleteBusy ? 'Cancelling…' : 'Cancel Deletion'}
+              </GoldGradientText>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => setDeleteModalVisible(true)}
+            style={styles.linkRow}
+            disabled={deleteBusy}
+          >
+            <Text style={styles.deleteLink}>Delete Account</Text>
+          </Pressable>
+        )}
       </ScrollView>
       </KeyboardAvoidingView>
 
@@ -263,6 +332,16 @@ export default function PersonalInformationScreen() {
         visible={changePasswordVisible}
         onClose={() => setChangePasswordVisible(false)}
         email={user?.email ?? ''}
+      />
+
+      <ConfirmModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleConfirmDelete}
+        icon={<AccountIcon color={COLORS.gold} size={26} />}
+        title="Delete your account?"
+        description={`Your membership will stay fully active until ${deletionDateLabel} — after that, your account will be permanently deleted. You can cancel this any time before then from this screen.`}
+        confirmLabel="Delete Account"
       />
     </View>
   );
@@ -458,6 +537,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   link: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  deleteLink: {
+    color: DANGER,
     fontSize: 13,
     fontWeight: '600',
   },
