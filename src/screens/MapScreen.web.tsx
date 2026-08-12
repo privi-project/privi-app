@@ -46,6 +46,19 @@ const DARK_MAP_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#1A3A38' }] },
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6FA7A1' }] },
 ];
+
+// Light-mode equivalent of DARK_MAP_STYLE's poi/transit hiding, with none
+// of the color overrides — was previously missing entirely (light mode
+// passed `styles: undefined`, Google's untouched default style), so the
+// map showed every default POI pin (parks, hospitals, golf clubs,
+// supermarkets...) instead of only Privi's own pins. Confirmed real bug
+// 2026-08-12, not a design choice — the intent (see DARK_MAP_STYLE) was
+// always "hide other businesses' pins," just never applied outside dark
+// mode. Same fix as MapScreen.native.tsx.
+const LIGHT_MAP_STYLE: google.maps.MapTypeStyle[] = [
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+];
 const MAP_LIBRARIES: 'places'[] = [];
 const PIN_ASSET = require('../../assets/brand/privi-pin.png');
 // react-native-web's Metro asset plugin resolves a require()'d image
@@ -188,7 +201,7 @@ export default function MapScreen() {
             }}
             options={{
               disableDefaultUI: true,
-              styles: isDark ? DARK_MAP_STYLE : undefined,
+              styles: isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE,
             }}
           >
             {pins.map((pin) => (

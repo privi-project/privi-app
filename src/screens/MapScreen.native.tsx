@@ -41,6 +41,18 @@ const DARK_MAP_STYLE = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6FA7A1' }] },
 ];
 
+// Light-mode equivalent of DARK_MAP_STYLE's poi/transit hiding, with none
+// of the color overrides — was previously missing entirely (light mode
+// passed `[]`, Google's untouched default style), so the map showed every
+// default POI pin (parks, hospitals, golf clubs, supermarkets...) instead
+// of only Privi's own pins. Confirmed real bug 2026-08-12, not a design
+// choice — the intent (see DARK_MAP_STYLE) was always "hide other
+// businesses' pins," just never applied outside dark mode.
+const LIGHT_MAP_STYLE = [
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+];
+
 export default function MapScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -167,7 +179,7 @@ export default function MapScreen() {
           // PROVIDER_GOOGLE override on iOS) — Apple Maps on iOS already
           // switches to its own dark map automatically with the system
           // appearance, no code needed there.
-          customMapStyle={isDark ? DARK_MAP_STYLE : []}
+          customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         >
           {pins.map((pin) => (
             <Marker
