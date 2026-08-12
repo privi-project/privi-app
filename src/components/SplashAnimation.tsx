@@ -89,6 +89,11 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
     // width + inner scale/opacity together so visible content always
     // exactly fills its wrapper — no clip-mask edge ever shows.
     schedule(() => {
+      // TEMPORARY diagnostic (2026-08-12) — confirming whether this timer
+      // actually fires on a real device at all, per the other session's
+      // suggested next step. Check via `adb logcat` or the Metro output
+      // while the splash plays. Remove once the real cause is found.
+      console.log('[splash diag] stage3 (wordmark growth) fired');
       Animated.timing(wordmarkGrowth, {
         toValue: 1,
         duration: SPLASH_ANIMATION.stage3Duration,
@@ -224,6 +229,21 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
               width: wrapperWidth,
               height: wordmarkDisplayHeight,
               overflow: 'hidden',
+              // Added 2026-08-12 per the other session's hypothesis: this
+              // sits in a flexDirection:'row' sibling of the icon, which
+              // is ALSO animating its own width/height at nearly the same
+              // time (stage 2 and stage 3 overlap by design). Android's
+              // flex re-layout during simultaneous width animations on
+              // sibling elements is a known trouble spot in this RN/Expo
+              // version (hit a related quirk building Home's category
+              // row) — without an explicit flexShrink/flexGrow, Android's
+              // flex algorithm could recollapse this wrapper toward zero
+              // on a layout pass triggered by the icon's own resize, even
+              // while wordmarkGrowth's animated value is correctly
+              // ticking up. Not confirmed as THE cause yet — tracked
+              // alongside the diagnostic log at stage3's schedule().
+              flexShrink: 0,
+              flexGrow: 0,
             }}
           >
             <Animated.View
