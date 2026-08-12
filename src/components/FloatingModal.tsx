@@ -51,7 +51,14 @@ export function FloatingModal({ visible, onClose, icon, title, description, chil
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // 'undefined' on Android was the bug (2026-08-12): RN's Modal
+        // renders as its own separate native overlay window, which
+        // doesn't inherit the Activity's OS-level keyboard-resize
+        // behavior the way a normal screen does — leaving this
+        // unset meant the keyboard just covered the modal's content
+        // with no avoidance at all. 'height' is the standard fix for
+        // KeyboardAvoidingView specifically inside a Modal on Android.
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: OVERLAY.darkStrong, opacity }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
