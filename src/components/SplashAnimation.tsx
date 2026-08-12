@@ -226,7 +226,7 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
               overflow: 'hidden',
             }}
           >
-            <View
+            <Animated.View
               style={{
                 marginLeft: size.gap,
                 width: wordmarkFinalWidth,
@@ -248,7 +248,7 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
                 resizeMode="contain"
                 style={[StyleSheet.absoluteFill, { opacity: wordmarkCrossfade }]}
               />
-            </View>
+            </Animated.View>
           </Animated.View>
         </View>
 
