@@ -71,7 +71,7 @@ export function FloatingModal({ visible, onClose, icon, title, description, chil
           </Pressable>
 
           {icon ? (
-            <GoldGradientBorder borderWidth={1.5} borderRadius={28} backgroundColor={cardBg} style={styles.iconCircle}>
+            <GoldGradientBorder borderWidth={1.5} borderRadius={28} backgroundColor={cardBg} style={styles.iconCircle} fillHeight>
               <View style={styles.iconCircleInner}>{icon}</View>
             </GoldGradientBorder>
           ) : null}

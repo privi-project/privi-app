@@ -195,7 +195,7 @@ export default function MapScreen() {
         </MapView>
 
         <Pressable style={styles.locateButton} onPress={handleLocateMe} hitSlop={6}>
-          <GoldGradientBorder borderWidth={1.5} borderRadius={22} backgroundColor={COLORS.teal} style={styles.locateButtonBorder}>
+          <GoldGradientBorder borderWidth={1.5} borderRadius={22} backgroundColor={COLORS.teal} style={styles.locateButtonBorder} fillHeight>
             <View style={styles.locateButtonInner}>
               <MyLocationIcon color={COLORS.gold} size={20} />
             </View>

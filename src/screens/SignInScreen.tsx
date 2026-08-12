@@ -112,7 +112,7 @@ export default function SignInScreen() {
           </Text>
 
           <Text style={[styles.label, { color: textColor }]}>Email address</Text>
-          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap}>
+          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap} fillHeight>
             <TextInput
               style={[styles.input, { color: textColor }, noOutline]}
               placeholder="Enter your email"
@@ -132,6 +132,7 @@ export default function SignInScreen() {
               borderRadius={12}
               backgroundColor={inputBg}
               style={styles.inputWrap}
+              fillHeight
             >
               <TextInput
                 style={[styles.input, styles.passwordInput, { color: textColor }, noOutline]}
@@ -184,7 +185,7 @@ export default function SignInScreen() {
           </View>
 
           <Pressable onPress={handleCreateAccount}>
-            <GoldGradientBorder borderWidth={1.5} borderRadius={12} backgroundColor={backgroundColor} style={styles.secondaryButton}>
+            <GoldGradientBorder borderWidth={1.5} borderRadius={12} backgroundColor={backgroundColor} style={styles.secondaryButton} fillHeight>
               <View style={styles.secondaryButtonInner}>
                 <Text style={[styles.secondaryButtonText, { color: textColor }]}>Create account</Text>
               </View>

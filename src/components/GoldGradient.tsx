@@ -65,6 +65,19 @@ interface GoldGradientBorderProps {
   /** The surface colour behind the border — must match whatever sits under it. */
   backgroundColor: string;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Pass true ONLY when the caller's `style` sets an explicit `height`
+   * (e.g. inputs, buttons, the fixed-size category circles) — makes the
+   * inner content stretch to fill that height, closing a gold gap that
+   * otherwise shows at the bottom edge whenever content comes out
+   * shorter than the box. Leave false/omitted for content-sized usage
+   * (cards, panels, anything without an explicit height) — flex:1 there
+   * collapses the box to almost nothing instead, confirmed on a real
+   * device 2026-08-12 (AccountScreen's cards, NotificationPanel). A
+   * single automatic behavior can't correctly serve both cases at once,
+   * so this is an explicit per-caller choice, not a guess.
+   */
+  fillHeight?: boolean;
 }
 
 export function GoldGradientBorder({
@@ -73,6 +86,7 @@ export function GoldGradientBorder({
   borderRadius = 12,
   backgroundColor,
   style,
+  fillHeight = false,
 }: GoldGradientBorderProps) {
   if (Platform.OS === 'web') {
     // The multi-layer background-image border trick (website's own
@@ -96,17 +110,14 @@ export function GoldGradientBorder({
     <LinearGradient {...GRADIENT_PROPS} style={[{ borderRadius }, style]}>
       <View
         style={{
-          // REVERTED 2026-08-12: flex:1 here was added to fix a gold gap
-          // showing on Sign In's fixed-height inputs/buttons, but it broke
-          // every GoldGradientBorder usage that DOESN'T have an explicit
-          // height on the outer (content-sized cards/panels, e.g.
-          // AccountScreen's menu cards, NotificationPanel) — those
-          // collapsed to almost nothing (just a thin gold line), a much
-          // worse regression than the gap it fixed. Confirmed live on a
-          // real device. Reverted to the original margin-only approach,
-          // which is correct for content-sized usage; the fixed-height
-          // gap is a real but lower-severity cosmetic issue, tracked
-          // separately rather than risking another broken fix here.
+          // flex:1 only when the caller opts in via fillHeight (see prop
+          // doc) — unconditional flex:1 here previously broke every
+          // content-sized usage (AccountScreen's cards, NotificationPanel
+          // collapsed to almost nothing), confirmed on a real device
+          // 2026-08-12. Explicit-height callers (inputs, buttons, the
+          // category circles) need it to close the bottom gold gap;
+          // content-sized callers need its absence to size correctly.
+          ...(fillHeight ? { flex: 1 } : null),
           margin: borderWidth,
           borderRadius: Math.max(borderRadius - borderWidth, 0),
           backgroundColor,

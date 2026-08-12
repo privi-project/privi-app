@@ -341,6 +341,7 @@ export default function HomeScreen() {
                 borderRadius={10}
                 backgroundColor={COLORS.teal}
                 style={styles.filterButton}
+                fillHeight
               >
                 <View style={styles.filterButtonInner}>
                   <Text style={styles.filterButtonIcon}>⚙</Text>
@@ -374,6 +375,7 @@ export default function HomeScreen() {
                   borderRadius={26}
                   backgroundColor={COLORS.teal}
                   style={styles.categoryCircle}
+                  fillHeight
                 >
                   <View style={styles.categoryCircleContent}>
                     <CategoryIcon slug={cat.slug} width={26} height={26} color={COLORS.gold} />
@@ -385,6 +387,7 @@ export default function HomeScreen() {
                   borderRadius={26}
                   backgroundColor={backgroundColor}
                   style={styles.categoryCircle}
+                  fillHeight
                 >
                   <View style={styles.categoryCircleContent}>
                     <CategoryIcon slug={cat.slug} width={26} height={26} color={COLORS.gold} />

@@ -111,7 +111,7 @@ export default function ResetPasswordScreen() {
           </Text>
 
           <Text style={[styles.label, { color: textColor }]}>New password</Text>
-          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap}>
+          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap} fillHeight>
             <TextInput
               style={[styles.input, { color: textColor }, noOutline]}
               placeholder="Enter new password"
@@ -124,7 +124,7 @@ export default function ResetPasswordScreen() {
           </GoldGradientBorder>
 
           <Text style={[styles.label, { color: textColor }]}>Confirm password</Text>
-          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap}>
+          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap} fillHeight>
             <TextInput
               style={[styles.input, { color: textColor }, noOutline]}
               placeholder="Confirm new password"

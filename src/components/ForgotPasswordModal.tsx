@@ -111,7 +111,7 @@ export function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalPro
           onPress={handleSendResetLink}
           disabled={loading}
         >
-          <GoldGradientBorder borderWidth={1.5} borderRadius={12} backgroundColor={COLORS.teal} style={styles.primaryButton}>
+          <GoldGradientBorder borderWidth={1.5} borderRadius={12} backgroundColor={COLORS.teal} style={styles.primaryButton} fillHeight>
             <View style={styles.primaryButtonInner}>
               {loading ? (
                 <ActivityIndicator color={COLORS.ivory} />

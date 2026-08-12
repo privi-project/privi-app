@@ -152,7 +152,7 @@ export default function LocationSetupScreen() {
           </Pressable>
 
           <Pressable onPress={handleSkip} disabled={loading}>
-            <GoldGradientBorder borderWidth={1.5} borderRadius={12} backgroundColor={backgroundColor} style={styles.secondaryButton}>
+            <GoldGradientBorder borderWidth={1.5} borderRadius={12} backgroundColor={backgroundColor} style={styles.secondaryButton} fillHeight>
               <View style={styles.secondaryButtonInner}>
                 <Text style={[styles.secondaryButtonText, { color: textColor }]}>Not now</Text>
               </View>
@@ -169,7 +169,7 @@ export default function LocationSetupScreen() {
           </Text>
 
           <Text style={[styles.label, { color: textColor }]}>Postcode prefix</Text>
-          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap}>
+          <GoldGradientBorder borderWidth={1} borderRadius={12} backgroundColor={inputBg} style={styles.inputWrap} fillHeight>
             <TextInput
               style={[styles.input, { color: textColor }, noOutline]}
               placeholder="e.g. SE25, LS1, EH1"
