@@ -20,8 +20,8 @@ import {
   fetchFavouriteBusinesses,
   removeFavourite,
 } from '@/services/businesses';
-import { fetchMyNotifications } from '@/services/notifications';
 import { useAuthStore } from '@/store/auth';
+import { useNotificationDot } from '@/hooks/useNotificationDot';
 
 export default function FavouritesScreen() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function FavouritesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(false);
+  const { hasNotifications, refresh: refreshNotificationDot } = useNotificationDot();
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
   const textColor = isDark ? COLORS.ivory : COLORS.charcoal;
@@ -69,13 +69,6 @@ export default function FavouritesScreen() {
       load();
     }, [load])
   );
-
-  useEffect(() => {
-    if (!user) return;
-    fetchMyNotifications()
-      .then((n) => setHasNotifications(n.length > 0))
-      .catch(() => setHasNotifications(false));
-  }, [user]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -159,7 +152,10 @@ export default function FavouritesScreen() {
 
       <NotificationPanel
         visible={notificationsVisible}
-        onClose={() => setNotificationsVisible(false)}
+        onClose={() => {
+          setNotificationsVisible(false);
+          refreshNotificationDot();
+        }}
       />
     </View>
   );

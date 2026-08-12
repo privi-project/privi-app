@@ -36,9 +36,9 @@ import {
   removeFavourite,
   getMemberLocation,
 } from '@/services/businesses';
-import { fetchMyNotifications } from '@/services/notifications';
 import { fetchActiveSeasonBanner, SeasonBanner as SeasonBannerData } from '@/services/banners';
 import { useAuthStore } from '@/store/auth';
+import { useNotificationDot } from '@/hooks/useNotificationDot';
 
 // Matches search_bar_animation.html exactly: bar contracts 100%->70% over
 // 0.4s while the filter bubble scales/fades into the space it leaves
@@ -66,7 +66,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(false);
+  const { hasNotifications, refresh: refreshNotificationDot } = useNotificationDot();
   const [filterVisible, setFilterVisible] = useState(false);
   const [seasonBanner, setSeasonBanner] = useState<SeasonBannerData | null>(null);
   // Set only when the season banner (action_type='categories') is tapped —
@@ -166,22 +166,25 @@ export default function HomeScreen() {
     }, [user])
   );
 
-  useEffect(() => {
-    if (!user) return;
-    fetchMyNotifications()
-      .then((n) => setHasNotifications(n.length > 0))
-      .catch(() => setHasNotifications(false));
-  }, [user]);
-
-  // Season banner is not member-specific and not affected by search/filter
-  // state — fetch once on mount. Admin Portal keeps it off (is_active=false)
-  // until the founder creates and publishes one, so null here is the
-  // normal, expected state, not an error.
-  useEffect(() => {
-    fetchActiveSeasonBanner()
-      .then(setSeasonBanner)
-      .catch((e) => console.error('Failed to load season banner', e));
-  }, []);
+  // Full business list (including featuredLevel) and the season banner are
+  // BOTH set from the Admin Portal and neither is member-specific — a
+  // founder marking a business featured or publishing a season banner
+  // while the member's app is already open (Home stays mounted across tab
+  // switches) previously never showed up without a full app reload, since
+  // loadData()/fetchActiveSeasonBanner() only ran once on initial mount.
+  // Confirmed live 2026-08-12. Same fix as the favourites-id refresh above
+  // — re-check on every return to this tab, not just once ever. loadData()
+  // itself doesn't toggle the loading spinner (only the mount-effect
+  // wrapper above does), so this refreshes silently in the background
+  // rather than flashing a spinner every time the member switches tabs.
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+      fetchActiveSeasonBanner()
+        .then(setSeasonBanner)
+        .catch((e) => console.error('Failed to load season banner', e));
+    }, [loadData])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -485,7 +488,10 @@ export default function HomeScreen() {
 
       <NotificationPanel
         visible={notificationsVisible}
-        onClose={() => setNotificationsVisible(false)}
+        onClose={() => {
+          setNotificationsVisible(false);
+          refreshNotificationDot();
+        }}
       />
 
       <FilterModal

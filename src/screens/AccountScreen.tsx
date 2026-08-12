@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS } from '@/constants/colors';
@@ -8,27 +8,18 @@ import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient'
 import { BellIcon, AccountIcon, SettingsIcon, ChevronRightIcon } from '@/components/NavIcons';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { SignOutModal } from '@/components/SignOutModal';
-import { fetchMyNotifications } from '@/services/notifications';
-import { useAuthStore } from '@/store/auth';
+import { useNotificationDot } from '@/hooks/useNotificationDot';
 
 export default function AccountScreen() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const colorScheme = useAppColorScheme();
   const isDark = colorScheme === 'dark';
 
   const [notificationsVisible, setNotificationsVisible] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(false);
+  const { hasNotifications, refresh: refreshNotificationDot } = useNotificationDot();
   const [signOutVisible, setSignOutVisible] = useState(false);
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
-
-  useEffect(() => {
-    if (!user) return;
-    fetchMyNotifications()
-      .then((n) => setHasNotifications(n.length > 0))
-      .catch(() => setHasNotifications(false));
-  }, [user]);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -81,7 +72,10 @@ export default function AccountScreen() {
 
       <NotificationPanel
         visible={notificationsVisible}
-        onClose={() => setNotificationsVisible(false)}
+        onClose={() => {
+          setNotificationsVisible(false);
+          refreshNotificationDot();
+        }}
       />
 
       <SignOutModal visible={signOutVisible} onClose={() => setSignOutVisible(false)} />

@@ -9,8 +9,8 @@ import { BellIcon, MyLocationIcon } from '@/components/NavIcons';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { BusinessPreviewSheet } from '@/components/BusinessPreviewSheet';
 import { BusinessPin, fetchBusinessPins, getMemberLocation } from '@/services/businesses';
-import { fetchMyNotifications } from '@/services/notifications';
 import { requestForegroundLocationPermission, getCurrentPosition } from '@/services/location';
+import { useNotificationDot } from '@/hooks/useNotificationDot';
 import { openDirections } from '@/utils/mapsHandoff';
 import { useAuthStore } from '@/store/auth';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
@@ -64,7 +64,7 @@ export default function MapScreen() {
   const [initialRegion, setInitialRegion] = useState<typeof FALLBACK_REGION | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(false);
+  const { hasNotifications, refresh: refreshNotificationDot } = useNotificationDot();
   const [selectedPin, setSelectedPin] = useState<BusinessPin | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
@@ -90,12 +90,6 @@ export default function MapScreen() {
     })();
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    fetchMyNotifications()
-      .then((n) => setHasNotifications(n.length > 0))
-      .catch(() => setHasNotifications(false));
-  }, [user]);
 
   // A custom, branded locate control on both platforms — Android's own
   // Google Maps SDK offers a built-in one, but iOS/Apple Maps has no
@@ -205,7 +199,10 @@ export default function MapScreen() {
 
       <NotificationPanel
         visible={notificationsVisible}
-        onClose={() => setNotificationsVisible(false)}
+        onClose={() => {
+          setNotificationsVisible(false);
+          refreshNotificationDot();
+        }}
       />
 
       <BusinessPreviewSheet

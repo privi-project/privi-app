@@ -9,8 +9,8 @@ import { BellIcon, MyLocationIcon } from '@/components/NavIcons';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { BusinessPreviewSheet } from '@/components/BusinessPreviewSheet';
 import { BusinessPin, fetchBusinessPins, getMemberLocation } from '@/services/businesses';
-import { fetchMyNotifications } from '@/services/notifications';
 import { requestForegroundLocationPermission, getCurrentPosition } from '@/services/location';
+import { useNotificationDot } from '@/hooks/useNotificationDot';
 import { openDirections } from '@/utils/mapsHandoff';
 import { useAuthStore } from '@/store/auth';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
@@ -84,7 +84,7 @@ export default function MapScreen() {
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(false);
+  const { hasNotifications, refresh: refreshNotificationDot } = useNotificationDot();
   const [selectedPin, setSelectedPin] = useState<BusinessPin | null>(null);
 
   useEffect(() => {
@@ -109,12 +109,6 @@ export default function MapScreen() {
     })();
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    fetchMyNotifications()
-      .then((n) => setHasNotifications(n.length > 0))
-      .catch(() => setHasNotifications(false));
-  }, [user]);
 
   // Same purpose as the native screen's locate button: recentre Privi's own
   // map on the member, not "Get Directions" (which routes to a specific
@@ -226,7 +220,10 @@ export default function MapScreen() {
 
       <NotificationPanel
         visible={notificationsVisible}
-        onClose={() => setNotificationsVisible(false)}
+        onClose={() => {
+          setNotificationsVisible(false);
+          refreshNotificationDot();
+        }}
       />
 
       <BusinessPreviewSheet
