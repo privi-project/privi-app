@@ -5,6 +5,7 @@ import { GoldGradientText } from '@/components/GoldGradient';
 import { MailIcon, CheckIcon } from '@/components/NavIcons';
 import { FloatingModal } from '@/components/FloatingModal';
 import { supabase } from '@/services/supabase';
+import { PASSWORD_RESET_REDIRECT_URL } from '@/constants/authLinks';
 
 interface ChangePasswordModalProps {
   visible: boolean;
@@ -27,7 +28,7 @@ export function ChangePasswordModal({ visible, onClose, email }: ChangePasswordM
   const handleSend = async () => {
     setLoading(true);
     try {
-      await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'privi://reset-password' });
+      await supabase.auth.resetPasswordForEmail(email, { redirectTo: PASSWORD_RESET_REDIRECT_URL });
       setSent(true);
     } finally {
       setLoading(false);

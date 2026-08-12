@@ -6,6 +6,7 @@ import { FloatingModal } from '@/components/FloatingModal';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { supabase } from '@/services/supabase';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
+import { PASSWORD_RESET_REDIRECT_URL } from '@/constants/authLinks';
 import { noOutline } from '@/utils/webStyles';
 
 interface ForgotPasswordModalProps {
@@ -42,7 +43,7 @@ export function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalPro
     setLoading(true);
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'privi://reset-password',
+        redirectTo: PASSWORD_RESET_REDIRECT_URL,
       });
 
       if (resetError) {
