@@ -278,6 +278,8 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: COLORS.teal,
+    borderWidth: 1.5,
+    borderColor: COLORS.gold,
     borderRadius: 12,
     height: 56,
     alignItems: 'center',
