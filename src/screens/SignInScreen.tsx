@@ -308,6 +308,18 @@ const styles = StyleSheet.create({
   secondaryButton: {
     height: 56,
   },
+  // Was referenced (line ~188) but never actually defined — the "Create
+  // account" button's text rendered with no centering/layout at all as a
+  // result, sitting top-left instead of centered. Confirmed live
+  // 2026-08-12 from a real device screenshot. This was ALSO showing up
+  // as a persistent TS2551 typecheck error throughout this session,
+  // mistakenly treated as a harmless pre-existing/unrelated error rather
+  // than investigated — it was the exact cause of a real visible bug.
+  secondaryButtonInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   secondaryButtonText: {
     fontSize: 15,
     fontWeight: '600',

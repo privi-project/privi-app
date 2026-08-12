@@ -182,13 +182,13 @@ export default function MapScreen() {
 
       <View style={styles.mapWrap}>
         {loadError ? (
-          <View style={[styles.centered, StyleSheet.absoluteFillObject]}>
+          <View style={[styles.centered, StyleSheet.absoluteFill]}>
             <Text style={{ color: isDark ? COLORS.ivory : COLORS.charcoal, textAlign: 'center', paddingHorizontal: 30 }}>
               Map couldn't load. Check that the Maps JavaScript API is enabled for the configured Google Maps key.
             </Text>
           </View>
         ) : !isLoaded ? (
-          <View style={[styles.centered, StyleSheet.absoluteFillObject]}>
+          <View style={[styles.centered, StyleSheet.absoluteFill]}>
             <ActivityIndicator color={COLORS.teal} />
           </View>
         ) : (

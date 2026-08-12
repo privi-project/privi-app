@@ -96,6 +96,18 @@ export function GoldGradientBorder({
     <LinearGradient {...GRADIENT_PROPS} style={[{ borderRadius }, style]}>
       <View
         style={{
+          // A plain View in a column-flex parent only sizes to its own
+          // content height by default — it does NOT stretch to fill the
+          // parent's height just because a margin is set. Without flex:1,
+          // whenever this View's natural content height came out shorter
+          // than the outer gradient's fixed height (the common case), the
+          // uncovered gap showed through as extra gold gradient — visible
+          // as a thick gold "slab" specifically at the bottom edge, since
+          // an unstretched child sits at the top of its column container
+          // by default. Confirmed live 2026-08-12 on Sign In's input
+          // fields and the "Create account" button. This affects every
+          // GoldGradientBorder usage app-wide, not just Sign In.
+          flex: 1,
           margin: borderWidth,
           borderRadius: Math.max(borderRadius - borderWidth, 0),
           backgroundColor,
