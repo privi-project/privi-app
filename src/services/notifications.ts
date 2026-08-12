@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import * as Location from 'expo-location';
+import { getSeenNotificationIds } from './notificationReads';
 
 export type NotificationType = 'new_business' | 'new_offer' | 'offer_ending_soon' | 'general';
 
@@ -44,5 +45,11 @@ export async function fetchMyNotifications(): Promise<AppNotification[]> {
   });
 
   if (error) throw error;
-  return data ?? [];
+
+  // Filter out notifications this member has already individually tapped
+  // open — purely local/on-device (see notificationReads.ts), not a
+  // server-side read-receipt. Every screen's bell dot derives from this
+  // same function, so filtering here fixes all of them at once.
+  const seen = await getSeenNotificationIds();
+  return (data ?? []).filter((n: AppNotification) => !seen.has(n.id));
 }

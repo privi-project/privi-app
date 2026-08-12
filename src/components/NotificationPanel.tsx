@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { COLORS } from '@/constants/colors';
 import { GoldGradientBorder } from '@/components/GoldGradient';
 import { fetchMyNotifications, AppNotification } from '@/services/notifications';
+import { markNotificationSeen } from '@/services/notificationReads';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 
 interface NotificationPanelProps {
@@ -24,10 +25,19 @@ interface NotificationPanelProps {
 /**
  * Activity Panel (Privi_updated.docx Section 3.9): a dropdown overlay
  * anchored top-right from the bell, not a dedicated screen. Deliberately
- * not a "noisy notification centre" — no numeric unread badge (no
- * read/unread state is persisted anywhere, consistent with the product's
- * "no usage tracking" decision), just the three approved types rendered
- * as authored by the Admin Portal.
+ * not a "noisy notification centre" — no numeric unread badge, and no
+ * server-side read/unread state (consistent with the product's "no usage
+ * tracking" decision — the Admin Portal/backend never learns which
+ * notifications a member has opened).
+ *
+ * What DOES happen (2026-08-12): tapping an individual notification here
+ * removes just that one from the list, on-device only
+ * (notificationReads.ts, AsyncStorage). Tapping the bell to merely VIEW
+ * the list does not clear anything — only actually opening a specific
+ * notification does. Once every notification in a member's targeted set
+ * has been individually tapped, fetchMyNotifications() naturally returns
+ * an empty list and every screen's bell dot clears itself, with no
+ * special-casing needed there.
  */
 export function NotificationPanel({ visible, onClose }: NotificationPanelProps) {
   const router = useRouter();
@@ -72,6 +82,12 @@ export function NotificationPanel({ visible, onClose }: NotificationPanelProps) 
   const placeholderColor = isDark ? '#9CA3AF' : COLORS.mediumGray;
 
   const handlePress = (notification: AppNotification) => {
+    // Optimistic removal from THIS panel's own list — no need to wait on
+    // the AsyncStorage write. Other screens' bell dots pick up the change
+    // next time they call fetchMyNotifications() themselves.
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+    markNotificationSeen(notification.id);
+
     onClose();
     if (notification.linked_business_id) {
       router.push(`/business/${notification.linked_business_id}`);
