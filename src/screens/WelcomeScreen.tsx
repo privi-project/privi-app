@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants/colors';
 import { SplashAnimation } from '@/components/SplashAnimation';
 import { BrandMark } from '@/components/BrandMark';
@@ -15,6 +16,7 @@ const WEBSITE_SIGNUP_URL = 'https://privi.info/signup';
 // plays to completion here since only not-signed-in users get this far.
 export default function WelcomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const colorScheme = useAppColorScheme();
   const [showSplash, setShowSplash] = useState(true);
   const buttonsOpacity = React.useRef(new Animated.Value(0)).current;
@@ -53,7 +55,9 @@ export default function WelcomeScreen() {
         <GoldGradientText style={styles.motto}>More for you.{'\n'}Every day.</GoldGradientText>
       </View>
 
-      <Animated.View style={[styles.buttonsContainer, { opacity: buttonsOpacity }]}>
+      <Animated.View
+        style={[styles.buttonsContainer, { bottom: 40 + insets.bottom, opacity: buttonsOpacity }]}
+      >
         <GoldGradientBorder backgroundColor={COLORS.teal} borderRadius={8}>
           <Pressable style={styles.primaryButton} onPress={handleCreateAccount}>
             <Text style={styles.primaryButtonText}>Create account</Text>
@@ -86,8 +90,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   buttonsContainer: {
+    // bottom is set inline (40 + insets.bottom) — confirmed live
+    // 2026-08-13 that a flat 40 wasn't enough clearance on a device with
+    // a large gesture-bar inset, same issue as SignInScreen's bottom
+    // button (this is the first screen not-signed-in users reach, same
+    // "outside the Tabs navigator" gap).
     position: 'absolute',
-    bottom: 40,
     left: 20,
     right: 20,
     gap: 10,

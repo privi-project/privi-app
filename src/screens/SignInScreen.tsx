@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants/colors';
 import { BrandMark } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
@@ -27,6 +28,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignInScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const colorScheme = useAppColorScheme();
   const theme = colorScheme === 'dark' ? 'dark' : 'light';
   const isDark = theme === 'dark';
@@ -93,7 +95,13 @@ export default function SignInScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          // Pre-auth screen — not part of the Tabs navigator, so it never
+          // got the safe-area bottom padding added there (2026-08-12).
+          // Confirmed live 2026-08-13: on a device with a large gesture-
+          // bar inset, the fixed paddingBottom:40 wasn't enough and the
+          // Sign in button sat under the system nav bar. Additive with
+          // insets.bottom, same pattern as the Tabs bar.
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
