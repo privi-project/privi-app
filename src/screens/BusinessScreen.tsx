@@ -23,12 +23,14 @@ import {
   GlobeIcon,
   PercentBadgeIcon,
   LocateIcon,
+  AccessibilityIcon,
 } from '@/components/NavIcons';
 import { ActionSheet } from '@/components/ActionSheet';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import {
   BusinessDetail,
+  BusinessLocationDetail,
   fetchBusinessDetail,
   fetchFavouriteIds,
   addFavourite,
@@ -53,9 +55,23 @@ export default function BusinessScreen() {
   const [isFavourite, setIsFavourite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
+  // Which location the "View on Map" / "Get directions" flow is currently
+  // for — generalised (2026-08-13) from a plain boolean so the SAME
+  // ActionSheet + ConfirmModal below work for the primary address AND
+  // any location opened from the new "Other locations" list, rather than
+  // duplicating the whole flow per location.
+  const [activeLocationSheet, setActiveLocationSheet] = useState<BusinessLocationDetail | null>(null);
   const [callConfirmVisible, setCallConfirmVisible] = useState(false);
+  // Separate from activeLocationSheet on purpose — ActionSheet nulls that
+  // out (via onClose) BEFORE the tapped item's onPress runs, so by the
+  // time ConfirmModal re-renders (reading state fresh, unlike the
+  // already-closed-over item.onPress) activeLocationSheet would already
+  // be null. This is set explicitly when "Get directions" is tapped,
+  // capturing the location at that moment, and stays stable until the
+  // confirm modal itself closes.
+  const [directionsLocation, setDirectionsLocation] = useState<BusinessLocationDetail | null>(null);
   const [directionsConfirmVisible, setDirectionsConfirmVisible] = useState(false);
+  const [otherLocationsExpanded, setOtherLocationsExpanded] = useState(false);
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
   const textColor = isDark ? COLORS.ivory : COLORS.charcoal;
@@ -108,12 +124,12 @@ export default function BusinessScreen() {
     }
   };
 
-  const addressLines = (() => {
-    const loc = business?.location;
+  const addressLinesFor = (loc: BusinessLocationDetail | null | undefined): string | null => {
     if (!loc) return null;
     if (loc.formatted_address) return loc.formatted_address;
     return [loc.address_line1, loc.city, loc.postcode].filter(Boolean).join(', ') || null;
-  })();
+  };
+  const addressLines = addressLinesFor(business?.location);
 
   const openingHoursText = formatOpeningHoursToday(business?.location?.opening_hours ?? null);
 
@@ -167,7 +183,7 @@ export default function BusinessScreen() {
         <View style={styles.infoBlock}>
           {addressLines && (
             <>
-              <Pressable style={styles.infoRow} onPress={() => setLocationSheetVisible(true)}>
+              <Pressable style={styles.infoRow} onPress={() => setActiveLocationSheet(business.location)}>
                 <MapPinIcon color={COLORS.gold} size={18} />
                 <Text style={[styles.infoText, { color: textColor }]} numberOfLines={2}>
                   {addressLines}
@@ -176,6 +192,16 @@ export default function BusinessScreen() {
               </Pressable>
               <Text style={[styles.addressHint, { color: subColor }]}>Tap for directions</Text>
             </>
+          )}
+          {business.location?.is_accessible && (
+            // Per-location, not per-business (2026-08-14) — a national
+            // business can have some accessible branches and some that
+            // aren't, so this only reflects the specific location shown
+            // above, not the business as a whole.
+            <View style={styles.infoRow}>
+              <AccessibilityIcon color={COLORS.gold} size={18} />
+              <Text style={[styles.infoText, { color: textColor }]}>Wheelchair / step-free accessible</Text>
+            </View>
           )}
           {openingHoursText && (
             // Display only, per the mockup — no tap action and no chevron,
@@ -201,6 +227,47 @@ export default function BusinessScreen() {
               <Text style={[styles.infoText, { color: textColor }]}>Visit website</Text>
               <ChevronRightIcon color={COLORS.gold} size={18} />
             </Pressable>
+          )}
+
+          {/* 2026-08-13: fetchBusinessDetail already fetched every active
+              location for this business — it just used to discard all but
+              the nearest before returning. Expands in place (not a modal/
+              sheet) per founder's request; tapping an entry opens the same
+              View on Map / Get directions ActionSheet the primary address
+              uses, just parametrised by whichever location was tapped. */}
+          {business.otherLocations.length > 0 && (
+            <>
+              <Pressable
+                style={styles.infoRow}
+                onPress={() => setOtherLocationsExpanded((e) => !e)}
+              >
+                <MapPinIcon color={COLORS.gold} size={18} />
+                <Text style={[styles.infoText, { color: textColor }]}>
+                  Other locations ({business.otherLocations.length})
+                </Text>
+                <View style={{ transform: [{ rotate: otherLocationsExpanded ? '90deg' : '0deg' }] }}>
+                  <ChevronRightIcon color={COLORS.gold} size={18} />
+                </View>
+              </Pressable>
+
+              {otherLocationsExpanded && (
+                <View style={styles.otherLocationsList}>
+                  {business.otherLocations.map((loc) => (
+                    <Pressable
+                      key={loc.id}
+                      style={styles.otherLocationRow}
+                      onPress={() => setActiveLocationSheet(loc)}
+                    >
+                      <Text style={[styles.otherLocationText, { color: textColor }]} numberOfLines={2}>
+                        {addressLinesFor(loc)}
+                      </Text>
+                      {loc.is_accessible && <AccessibilityIcon color={COLORS.gold} size={14} />}
+                      <ChevronRightIcon color={COLORS.gold} size={16} />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </>
           )}
         </View>
 
@@ -244,10 +311,10 @@ export default function BusinessScreen() {
 
       <BottomNavBar />
 
-      {business.location?.latitude != null && business.location?.longitude != null && (
+      {activeLocationSheet?.latitude != null && activeLocationSheet?.longitude != null && (
         <ActionSheet
-          visible={locationSheetVisible}
-          onClose={() => setLocationSheetVisible(false)}
+          visible={!!activeLocationSheet}
+          onClose={() => setActiveLocationSheet(null)}
           items={[
             {
               key: 'map',
@@ -261,7 +328,10 @@ export default function BusinessScreen() {
               icon: <LocateIcon color={COLORS.gold} size={20} />,
               label: 'Get directions',
               sublabel: 'Open in your maps app',
-              onPress: () => setDirectionsConfirmVisible(true),
+              onPress: () => {
+                setDirectionsLocation(activeLocationSheet);
+                setDirectionsConfirmVisible(true);
+              },
             },
           ]}
         />
@@ -281,9 +351,9 @@ export default function BusinessScreen() {
         visible={directionsConfirmVisible}
         onClose={() => setDirectionsConfirmVisible(false)}
         onConfirm={() =>
-          business?.location?.latitude != null &&
-          business.location.longitude != null &&
-          openDirections(business.location.latitude, business.location.longitude, business.name)
+          directionsLocation?.latitude != null &&
+          directionsLocation?.longitude != null &&
+          openDirections(directionsLocation.latitude, directionsLocation.longitude, business.name)
         }
         icon={<LocateIcon color={COLORS.gold} size={26} />}
         title="Get directions?"
@@ -357,6 +427,22 @@ const styles = StyleSheet.create({
     marginTop: -6,
     marginBottom: 4,
     marginLeft: 30,
+  },
+  otherLocationsList: {
+    marginLeft: 30,
+    marginTop: -4,
+    marginBottom: 4,
+    gap: 2,
+  },
+  otherLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  otherLocationText: {
+    flex: 1,
+    fontSize: 12,
   },
   divider: {
     alignSelf: 'stretch',

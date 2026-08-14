@@ -102,7 +102,7 @@ export async function fetchBusinesses({
     .select(
       `id, name, short_description, logo_url, featured_level, featured_at,
        business_categories!inner(category_id),
-       business_locations(latitude, longitude, status)`
+       business_locations(latitude, longitude, status, is_accessible)`
     )
     .eq('status', 'active');
 
@@ -110,9 +110,11 @@ export async function fetchBusinesses({
     query = query.in('business_categories.category_id', categoryIds!);
   }
 
-  if (accessibleOnly) {
-    query = query.eq('is_accessible', true);
-  }
+  // accessibleOnly is no longer a SQL-level filter (2026-08-14) — is_accessible
+  // moved to business_locations (a national business can have some accessible
+  // sites and some that aren't), so "is this business accessible" only makes
+  // sense once we know WHICH location a member would actually be matched to.
+  // Filtered in JS below, after that matching happens.
 
   if (searchQuery && searchQuery.trim()) {
     // Matches Admin_Portal_Structure.docx Section 12's search scope:
@@ -127,15 +129,36 @@ export async function fetchBusinesses({
   if (error) throw error;
 
   const cards: BusinessCard[] = (data ?? []).map((b: any) => {
-    const activeLocation = (b.business_locations ?? []).find(
+    const activeLocations = (b.business_locations ?? []).filter(
       (loc: any) => loc.status === 'active' && loc.latitude && loc.longitude
     );
 
+    // Nearest location to the member when we know their position (matches
+    // fetchBusinessDetail's same logic) — otherwise just the first active
+    // one, same fallback as before. This is also the location whose
+    // is_accessible value the accessibleOnly filter below checks — a member
+    // should only see a business under "Accessible" if the SPECIFIC branch
+    // they'd actually be shown/directed to is accessible, not some other
+    // branch of the same chain they'd never visit.
+    let matchedLocation = activeLocations[0] ?? null;
+    if (memberLocation && activeLocations.length > 1) {
+      let best = activeLocations[0];
+      let bestDist = Infinity;
+      for (const loc of activeLocations) {
+        const d = distanceInMiles(memberLocation, { latitude: loc.latitude, longitude: loc.longitude });
+        if (d < bestDist) {
+          bestDist = d;
+          best = loc;
+        }
+      }
+      matchedLocation = best;
+    }
+
     const distanceMiles =
-      memberLocation && activeLocation
+      memberLocation && matchedLocation
         ? distanceInMiles(memberLocation, {
-            latitude: activeLocation.latitude,
-            longitude: activeLocation.longitude,
+            latitude: matchedLocation.latitude,
+            longitude: matchedLocation.longitude,
           })
         : null;
 
@@ -158,12 +181,17 @@ export async function fetchBusinesses({
       distanceMiles,
       featuredLevel,
       _featuredAt: b.featured_at as string | null,
-    } as BusinessCard & { _featuredAt: string | null };
+      _matchedLocationAccessible: matchedLocation?.is_accessible ?? false,
+    } as BusinessCard & { _featuredAt: string | null; _matchedLocationAccessible: boolean };
   });
+
+  const accessibilityFiltered = accessibleOnly
+    ? cards.filter((c: any) => c._matchedLocationAccessible)
+    : cards;
 
   const tierRank: Record<FeaturedLevel, number> = { global: 2, category: 1, none: 0 };
 
-  cards.sort((a: any, b: any) => {
+  accessibilityFiltered.sort((a: any, b: any) => {
     const tierDiff = tierRank[b.featuredLevel as FeaturedLevel] - tierRank[a.featuredLevel as FeaturedLevel];
     if (tierDiff !== 0) return tierDiff;
 
@@ -180,7 +208,9 @@ export async function fetchBusinesses({
     return a.distanceMiles - b.distanceMiles;
   });
 
-  const result = cards.map(({ _featuredAt, ...card }: any) => card as BusinessCard);
+  const result = accessibilityFiltered.map(
+    ({ _featuredAt, _matchedLocationAccessible, ...card }: any) => card as BusinessCard
+  );
 
   if (maxDistanceMiles != null) {
     return result.filter((c) => c.distanceMiles != null && c.distanceMiles <= maxDistanceMiles);
@@ -236,6 +266,7 @@ export interface BusinessLocationDetail {
   latitude: number | null;
   longitude: number | null;
   opening_hours: OpeningHours | null;
+  is_accessible: boolean;
 }
 
 export interface BusinessDetail {
@@ -245,6 +276,11 @@ export interface BusinessDetail {
   about_description: string | null;
   logo_url: string | null;
   location: BusinessLocationDetail | null;
+  // Every OTHER active location besides the one shown above, sorted
+  // nearest-first when the member's location is known — for the
+  // Business Page's "Other locations" expandable section (2026-08-13).
+  // Previously fetched and then discarded entirely; now returned.
+  otherLocations: BusinessLocationDetail[];
 }
 
 /**
@@ -262,7 +298,7 @@ export async function fetchBusinessDetail(
     .from('businesses')
     .select(
       `id, name, short_description, about_description, logo_url,
-       business_locations(id, address_line1, address_line2, city, region, postcode, formatted_address, phone, website_url, opening_hours, latitude, longitude, status)`
+       business_locations(id, address_line1, address_line2, city, region, postcode, formatted_address, phone, website_url, opening_hours, latitude, longitude, status, is_accessible)`
     )
     .eq('id', id)
     .eq('status', 'active')
@@ -289,28 +325,48 @@ export async function fetchBusinessDetail(
     location = best;
   }
 
+  const mapLocation = (l: any): BusinessLocationDetail => ({
+    id: l.id,
+    address_line1: l.address_line1,
+    address_line2: l.address_line2,
+    city: l.city,
+    region: l.region,
+    postcode: l.postcode,
+    formatted_address: l.formatted_address,
+    phone: l.phone,
+    website_url: l.website_url,
+    latitude: l.latitude,
+    longitude: l.longitude,
+    opening_hours: l.opening_hours,
+    is_accessible: l.is_accessible,
+  });
+
+  // Every other active location, nearest-first when we know the member's
+  // position (same distance math as picking the primary one above) —
+  // otherwise left in whatever order Supabase returned them.
+  const otherLocationsRaw = activeLocations.filter((l: any) => l.id !== location?.id);
+  if (memberLocation) {
+    otherLocationsRaw.sort((a: any, b: any) => {
+      const da =
+        a.latitude != null && a.longitude != null
+          ? distanceInMiles(memberLocation, { latitude: a.latitude, longitude: a.longitude })
+          : Infinity;
+      const db =
+        b.latitude != null && b.longitude != null
+          ? distanceInMiles(memberLocation, { latitude: b.latitude, longitude: b.longitude })
+          : Infinity;
+      return da - db;
+    });
+  }
+
   return {
     id: (data as any).id,
     name: (data as any).name,
     short_description: (data as any).short_description,
     about_description: (data as any).about_description,
     logo_url: (data as any).logo_url,
-    location: location
-      ? {
-          id: location.id,
-          address_line1: location.address_line1,
-          address_line2: location.address_line2,
-          city: location.city,
-          region: location.region,
-          postcode: location.postcode,
-          formatted_address: location.formatted_address,
-          phone: location.phone,
-          website_url: location.website_url,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          opening_hours: location.opening_hours,
-        }
-      : null,
+    location: location ? mapLocation(location) : null,
+    otherLocations: otherLocationsRaw.map(mapLocation),
   };
 }
 
