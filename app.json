@@ -53,6 +53,12 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow Privi to access your location to show nearby Member Benefits."
         }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "hidden": true
+        }
       ]
     ],
     "experiments": {
