@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Animated, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Animated, KeyboardAvoidingView, Keyboard, Platform } from 'react-native';
 import { COLORS, OVERLAY } from '@/constants/colors';
 import { GoldGradientBorder, GoldGradientText } from '@/components/GoldGradient';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
@@ -26,6 +26,16 @@ export function FloatingModal({ visible, onClose, icon, title, description, chil
 
   const scale = useRef(new Animated.Value(0.85)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  // Android only: RN's <Modal> renders in a separate native window that
+  // doesn't inherit the app's own keyboard-resize behaviour, which is why
+  // KeyboardAvoidingView alone doesn't work here (confirmed 2026-08-12 —
+  // 'height' behavior broke the keyboard from appearing at all, reverted).
+  // Bypassing that entirely: track the keyboard's real height directly and
+  // shift the card up by an explicit animated offset instead of relying on
+  // the (broken, for this specific case) automatic resize/pan behavior.
+  // iOS is unaffected and keeps using KeyboardAvoidingView's 'padding' mode
+  // below, which already works correctly there.
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
@@ -35,6 +45,30 @@ export function FloatingModal({ visible, onClose, icon, title, description, chil
       ]).start();
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      Animated.timing(keyboardOffset, {
+        toValue: -(e.endCoordinates.height / 2),
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleClose = () => {
     Animated.parallel([
@@ -65,7 +99,12 @@ export function FloatingModal({ visible, onClose, icon, title, description, chil
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: OVERLAY.darkStrong, opacity }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
 
-        <Animated.View style={[styles.card, { backgroundColor: cardBg, opacity, transform: [{ scale }] }]}>
+        <Animated.View
+          style={[
+            styles.card,
+            { backgroundColor: cardBg, opacity, transform: [{ scale }, { translateY: keyboardOffset }] },
+          ]}
+        >
           <Pressable style={styles.closeButton} onPress={handleClose} hitSlop={12}>
             <GoldGradientText style={styles.closeIcon}>✕</GoldGradientText>
           </Pressable>
