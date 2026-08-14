@@ -1,5 +1,17 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withDelay,
+  withTiming,
+  interpolate,
+  interpolateColor,
+  Extrapolation,
+  runOnJS,
+  Easing,
+} from 'react-native-reanimated';
+
 import { COLORS } from '@/constants/colors';
 import { SPLASH_ANIMATION, HOME_HEADER_TOP_PADDING } from '@/constants/animations';
 import { GoldGradientText } from '@/components/GoldGradient';
@@ -39,149 +51,171 @@ const ICON_START_HEIGHT = SCREEN_HEIGHT * 0.2;
 // height from the top of the screen — see constants/animations.ts.
 const HOME_TARGET_CENTER_Y = HOME_HEADER_TOP_PADDING + FINAL_SIZES.home.iconHeight / 2;
 
+const EASING = Easing.bezier(0.45, 0, 0.2, 1);
+
 /**
  * Splash animation, choreographed per user review (2026-07-27, refined
  * same day): starting icon fills 20% of screen height, shrinks to final
  * size, wordmark grows out of the logo to the right, lockup moves up with
  * motto reveal (destination='welcome') or fades to reveal Home underneath
- * (destination='home'). Stages are independently scheduled (not chained
- * via .start() callbacks) so each can start slightly before the previous
- * one's tail end — see SPLASH_ANIMATION's STAGE_OVERLAP — reading as one
- * continuous gesture instead of separate stop-start moves.
+ * (destination='home').
+ *
+ * Rebuilt 2026-08-12/13 on react-native-reanimated (was the legacy
+ * `Animated` API). Real-device testing proved the old approach's animated
+ * values ticked perfectly correctly in JS the whole time, but Android
+ * never repainted the wordmark until something unrelated later in the
+ * sequence forced a redraw. The first Reanimated attempt restored the
+ * "wordmark grows out of the icon" width/clip reveal (an `overflow:hidden`
+ * wrapper whose own width animated 0 -> final) — confirmed via live
+ * on-device retest that this STILL doesn't paint progressively, even on
+ * Reanimated's UI-thread engine. That rules out the animation engine as
+ * the cause entirely (two structurally different engines, identical
+ * symptom) and points at the specific technique: an `overflow:hidden`
+ * container animating its own width is a known category of Android
+ * view-invalidation bug, independent of what drives it. This version
+ * drops that technique — the wordmark wrapper is now a FIXED size the
+ * whole time, and the reveal is a plain opacity fade (0 -> 1), the one
+ * combination not yet tried and the animation type Reanimated's own docs
+ * treat as its most reliable, best-tested path.
  */
 export function SplashAnimation({ onComplete, theme = 'dark', destination = 'welcome' }: SplashAnimationProps) {
-  const iconSize = useRef(new Animated.Value(ICON_START_HEIGHT)).current;
-  const wordmarkGrowth = useRef(new Animated.Value(0)).current; // drives width + scale + opacity together
-  const lockupTranslateY = useRef(new Animated.Value(0)).current;
-  const mottoHeight = useRef(new Animated.Value(0)).current;
-  const mottoTranslateY = useRef(new Animated.Value(-10)).current;
-  const wordmarkCrossfade = useRef(new Animated.Value(0)).current;
-  const bgColorProgress = useRef(new Animated.Value(0)).current;
-  const overlayOpacity = useRef(new Animated.Value(1)).current; // 'home' only
-  const buttonsOpacity = useRef(new Animated.Value(0)).current;
-
-  const easing = Easing.bezier(0.45, 0, 0.2, 1);
   const size = FINAL_SIZES[destination];
-
   const wordmarkDisplayHeight = Math.round(size.wordmarkBaseHeight * WORDMARK_HEIGHT_STRETCH);
   const wordmarkRatio = theme === 'dark' ? WORDMARK_LIGHT_RATIO : WORDMARK_DARK_RATIO;
   const wordmarkFinalWidth = Math.round(size.wordmarkBaseHeight * wordmarkRatio);
+  const wordmarkClipFinalWidth = size.gap + wordmarkFinalWidth;
 
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const schedule = (fn: () => void, delay: number) => {
-      timers.push(setTimeout(fn, delay));
-    };
+  const iconSize = useSharedValue(ICON_START_HEIGHT);
+  // Direct pixels (0 -> wordmarkClipFinalWidth), not a 0-1 fraction routed
+  // through interpolate() — deliberately mirrors mottoHeight's pattern
+  // exactly (see stage3's comment below), since that's the one animated
+  // dimension proven to actually paint on this device.
+  const wordmarkRevealWidth = useSharedValue(0);
+  const lockupTranslateY = useSharedValue(0);
+  const mottoHeight = useSharedValue(0);
+  const mottoTranslateY = useSharedValue(-10);
+  const wordmarkCrossfade = useSharedValue(0);
+  const bgColorProgress = useSharedValue(0);
+  const overlayOpacity = useSharedValue(1); // 'home' only
+  const buttonsOpacity = useSharedValue(0);
 
-    // Stage 2: icon shrinks to final size, staying centred (trivial —
-    // it's the only element with layout weight so far, flexbox centres it
-    // automatically regardless of current size).
-    schedule(() => {
-      Animated.timing(iconSize, {
-        toValue: size.iconHeight,
-        duration: SPLASH_ANIMATION.stage2Duration,
-        easing,
-        useNativeDriver: false,
-      }).start();
-    }, SPLASH_ANIMATION.stage2Start);
+  React.useEffect(() => {
+    // Stage 2: icon shrinks to final size, staying centred.
+    iconSize.value = withDelay(
+      SPLASH_ANIMATION.stage2Start,
+      withTiming(size.iconHeight, { duration: SPLASH_ANIMATION.stage2Duration, easing: EASING })
+    );
 
-    // Stage 3: wordmark grows out of the logo. One driver controls wrapper
-    // width + inner scale/opacity together so visible content always
-    // exactly fills its wrapper — no clip-mask edge ever shows.
-    schedule(() => {
-      // TEMPORARY diagnostic (2026-08-12) — confirming whether this timer
-      // actually fires on a real device at all, per the other session's
-      // suggested next step. Check via `adb logcat` or the Metro output
-      // while the splash plays. Remove once the real cause is found.
-      console.log('[splash diag] stage3 (wordmark growth) fired');
-      Animated.timing(wordmarkGrowth, {
-        toValue: 1,
-        duration: SPLASH_ANIMATION.stage3Duration,
-        easing,
-        useNativeDriver: false,
-      }).start();
-    }, SPLASH_ANIMATION.stage3Start);
+    // Stage 3: wordmark's clip window grows from 0 to its final width —
+    // same overflow:hidden + directly-animated-pixel-dimension principle
+    // as the motto's proven-working height reveal below, just horizontal.
+    wordmarkRevealWidth.value = withDelay(
+      SPLASH_ANIMATION.stage3Start,
+      withTiming(wordmarkClipFinalWidth, { duration: SPLASH_ANIMATION.stage3Duration, easing: EASING })
+    );
 
     // Stage 4: move up to the destination's resting position.
-    schedule(() => {
-      const targetTranslateY =
-        destination === 'home' ? HOME_TARGET_CENTER_Y - SCREEN_HEIGHT / 2 : -90;
+    const targetTranslateY = destination === 'home' ? HOME_TARGET_CENTER_Y - SCREEN_HEIGHT / 2 : -90;
+    lockupTranslateY.value = withDelay(
+      SPLASH_ANIMATION.stage4Start,
+      withTiming(targetTranslateY, { duration: SPLASH_ANIMATION.stage4Duration, easing: EASING })
+    );
 
-      Animated.timing(lockupTranslateY, {
-        toValue: targetTranslateY,
-        duration: SPLASH_ANIMATION.stage4Duration,
-        easing,
-        useNativeDriver: true,
-      }).start();
-
-      if (destination === 'welcome') {
-        Animated.timing(mottoHeight, {
-          toValue: 68,
-          duration: SPLASH_ANIMATION.stage4Duration,
-          easing,
-          useNativeDriver: false,
-        }).start();
-        Animated.timing(mottoTranslateY, {
-          toValue: 0,
-          duration: SPLASH_ANIMATION.stage4Duration,
-          easing,
-          useNativeDriver: true,
-        }).start();
-      }
-    }, SPLASH_ANIMATION.stage4Start);
+    if (destination === 'welcome') {
+      mottoHeight.value = withDelay(
+        SPLASH_ANIMATION.stage4Start,
+        withTiming(68, { duration: SPLASH_ANIMATION.stage4Duration, easing: EASING })
+      );
+      mottoTranslateY.value = withDelay(
+        SPLASH_ANIMATION.stage4Start,
+        withTiming(0, { duration: SPLASH_ANIMATION.stage4Duration, easing: EASING })
+      );
+    }
 
     if (destination === 'home') {
       // Overlay fade must wait until the logo has fully arrived at Home's
       // header position (stage 4 completely done) — starting it early
       // revealed Home while the logo was still travelling, which read as
       // the logo vanishing rather than becoming Home's own header logo.
-      schedule(() => {
-        Animated.timing(overlayOpacity, {
-          toValue: 0,
-          duration: SPLASH_ANIMATION.homeFadeDuration,
-          easing,
-          useNativeDriver: true,
-        }).start(() => onComplete());
-      }, SPLASH_ANIMATION.homeFadeStart);
+      overlayOpacity.value = withDelay(
+        SPLASH_ANIMATION.homeFadeStart,
+        withTiming(0, { duration: SPLASH_ANIMATION.homeFadeDuration, easing: EASING }, (finished) => {
+          if (finished) runOnJS(onComplete)();
+        })
+      );
     } else {
       // 'welcome': the backdrop settles to the theme colour while
       // motto/buttons appear on top of it — starts with stage 4 as before.
-      schedule(() => {
-        Animated.timing(bgColorProgress, {
-          toValue: 1,
-          duration: SPLASH_ANIMATION.bgDuration,
-          easing,
-          useNativeDriver: false,
-        }).start();
-        Animated.timing(wordmarkCrossfade, {
-          toValue: 1,
-          duration: SPLASH_ANIMATION.bgDuration,
-          easing,
-          useNativeDriver: true,
-        }).start();
-      }, SPLASH_ANIMATION.bgStart);
+      bgColorProgress.value = withDelay(
+        SPLASH_ANIMATION.bgStart,
+        withTiming(1, { duration: SPLASH_ANIMATION.bgDuration, easing: EASING })
+      );
+      wordmarkCrossfade.value = withDelay(
+        SPLASH_ANIMATION.bgStart,
+        withTiming(1, { duration: SPLASH_ANIMATION.bgDuration, easing: EASING })
+      );
     }
 
     // Stage 5 ('welcome' only): buttons fade in, finishing exactly as the
     // background transition completes.
     if (destination === 'welcome') {
-      schedule(() => {
-        Animated.timing(buttonsOpacity, {
-          toValue: 1,
-          duration: SPLASH_ANIMATION.stage5Duration,
-          easing,
-          useNativeDriver: true,
-        }).start(() => onComplete());
-      }, SPLASH_ANIMATION.stage5Start);
+      buttonsOpacity.value = withDelay(
+        SPLASH_ANIMATION.stage5Start,
+        withTiming(1, { duration: SPLASH_ANIMATION.stage5Duration, easing: EASING }, (finished) => {
+          if (finished) runOnJS(onComplete)();
+        })
+      );
     }
-
-    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const backgroundColor = bgColorProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [COLORS.teal, theme === 'dark' ? COLORS.charcoal : COLORS.ivory],
+  const containerAnimatedStyle = useAnimatedStyle(() => {
+    if (destination === 'home') {
+      return { backgroundColor: COLORS.teal, opacity: overlayOpacity.value };
+    }
+    return {
+      backgroundColor: interpolateColor(
+        bgColorProgress.value,
+        [0, 1],
+        [COLORS.teal, theme === 'dark' ? COLORS.charcoal : COLORS.ivory]
+      ),
+    };
   });
+
+  const lockupAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lockupTranslateY.value }],
+  }));
+
+  const iconAnimatedStyle = useAnimatedStyle(() => ({
+    width: iconSize.value,
+    height: iconSize.value,
+  }));
+
+  const wordmarkRevealAnimatedStyle = useAnimatedStyle(() => ({
+    width: wordmarkRevealWidth.value,
+  }));
+
+  // Pure crossfade opacity (light/dark wordmark swap) — the reveal itself
+  // is handled entirely by the clip window's width above, not by opacity.
+  const startWordmarkAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(wordmarkCrossfade.value, [0, 1], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  const endWordmarkAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: wordmarkCrossfade.value,
+  }));
+
+  const mottoWrapAnimatedStyle = useAnimatedStyle(() => ({
+    height: mottoHeight.value,
+  }));
+
+  const mottoInnerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: mottoTranslateY.value }],
+  }));
+
+  const buttonsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: buttonsOpacity.value,
+  }));
 
   const startWordmarkSrc = require('../../assets/brand/privi-wordmark-light.png');
   const endWordmarkSrc =
@@ -189,92 +223,72 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
       ? require('../../assets/brand/privi-wordmark-light.png')
       : require('../../assets/brand/privi-wordmark-dark.png');
 
-  const wrapperWidth = wordmarkGrowth.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, size.gap + wordmarkFinalWidth],
-  });
-
-  // Pure translateX slide — no scaleX. scaling the wordmark image
-  // horizontally (its old approach) squished/stretched the letterforms
-  // asymmetrically as it grew, which read as a rotation/skew rather than a
-  // clean emergence (user-reported 2026-07-28). Sliding the full-size,
-  // undistorted image in from fully behind the logo (-wordmarkFinalWidth)
-  // to its resting spot (0), revealed by the wrapper's growing clip
-  // window, gives a glide with no shape distortion at any point.
-  const innerTranslateX = wordmarkGrowth.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-wordmarkFinalWidth, 0],
-  });
-
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        destination === 'home'
-          ? { backgroundColor: COLORS.teal, opacity: overlayOpacity }
-          : { backgroundColor },
-      ]}
-    >
-      <Animated.View
-        style={[styles.lockup, { transform: [{ translateY: lockupTranslateY }] }]}
-      >
-        <View style={styles.iconRow}>
+    <Animated.View style={[styles.container, containerAnimatedStyle]}>
+      <Animated.View style={[styles.lockup, lockupAnimatedStyle]}>
+        <Animated.View style={styles.iconRow}>
           <Animated.Image
             source={require('../../assets/brand/privi-logo.png')}
             resizeMode="contain"
-            style={{ width: iconSize, height: iconSize }}
+            style={iconAnimatedStyle}
           />
+          {/* Absolutely positioned, anchored at the icon's FINAL static
+              width (safe — stage3 no longer overlaps stage2's icon-shrink,
+              so the icon has always finished resizing before this becomes
+              visible) — kept absolute rather than a normal flex sibling
+              so the growing wordmark can't widen iconRow and drag the
+              icon sideways as a side effect. The clip window's WIDTH is
+              what's animated (0 -> full), same overflow:hidden +
+              directly-animated-pixel-dimension principle as the motto's
+              reveal below (which IS proven to paint correctly on this
+              device). collapsable={false} on every level here (2026-08-13):
+              the motto's own content is GoldGradientText — a heavier,
+              distinctly-native gradient-mask component Android's renderer
+              never flattens — while this subtree is plain layout Views
+              around a plain Image, exactly what Android's "view flattening"
+              optimization removes from the real native tree by default.
+              A flattened-away view can silently stop receiving dynamic
+              clip/paint updates, matching our exact symptom (nothing
+              visible until an unrelated redraw forces the whole tree to
+              recompute). collapsable={false} forces Android to keep these
+              as real native view nodes. */}
           <Animated.View
-            style={{
-              width: wrapperWidth,
-              height: wordmarkDisplayHeight,
-              overflow: 'hidden',
-              // Added 2026-08-12 per the other session's hypothesis: this
-              // sits in a flexDirection:'row' sibling of the icon, which
-              // is ALSO animating its own width/height at nearly the same
-              // time (stage 2 and stage 3 overlap by design). Android's
-              // flex re-layout during simultaneous width animations on
-              // sibling elements is a known trouble spot in this RN/Expo
-              // version (hit a related quirk building Home's category
-              // row) — without an explicit flexShrink/flexGrow, Android's
-              // flex algorithm could recollapse this wrapper toward zero
-              // on a layout pass triggered by the icon's own resize, even
-              // while wordmarkGrowth's animated value is correctly
-              // ticking up. Not confirmed as THE cause yet — tracked
-              // alongside the diagnostic log at stage3's schedule().
-              flexShrink: 0,
-              flexGrow: 0,
-            }}
+            collapsable={false}
+            style={[
+              styles.wordmarkWrap,
+              {
+                left: size.iconHeight,
+                top: (size.iconHeight - wordmarkDisplayHeight) / 2,
+                height: wordmarkDisplayHeight,
+              },
+              wordmarkRevealAnimatedStyle,
+            ]}
           >
-            <Animated.View
+            <View
+              collapsable={false}
               style={{
                 marginLeft: size.gap,
                 width: wordmarkFinalWidth,
                 height: wordmarkDisplayHeight,
-                opacity: wordmarkGrowth,
-                transform: [{ translateX: innerTranslateX }],
               }}
             >
               <Animated.Image
                 source={startWordmarkSrc}
                 resizeMode="contain"
-                style={[
-                  StyleSheet.absoluteFill,
-                  { opacity: wordmarkCrossfade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) },
-                ]}
+                style={[StyleSheet.absoluteFill, startWordmarkAnimatedStyle]}
               />
               <Animated.Image
                 source={endWordmarkSrc}
                 resizeMode="contain"
-                style={[StyleSheet.absoluteFill, { opacity: wordmarkCrossfade }]}
+                style={[StyleSheet.absoluteFill, endWordmarkAnimatedStyle]}
               />
-            </Animated.View>
+            </View>
           </Animated.View>
-        </View>
+        </Animated.View>
 
         {destination === 'welcome' && (
-          <Animated.View style={[styles.mottoWrap, { height: mottoHeight }]}>
-            <Animated.View style={{ transform: [{ translateY: mottoTranslateY }] }}>
+          <Animated.View style={[styles.mottoWrap, mottoWrapAnimatedStyle]}>
+            <Animated.View style={mottoInnerAnimatedStyle}>
               <GoldGradientText style={styles.motto}>
                 More for you.{'\n'}Every day.
               </GoldGradientText>
@@ -284,7 +298,7 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
       </Animated.View>
 
       {destination === 'welcome' && (
-        <Animated.View style={[styles.buttonsContainer, { opacity: buttonsOpacity }]} />
+        <Animated.View style={[styles.buttonsContainer, buttonsAnimatedStyle]} />
       )}
     </Animated.View>
   );
@@ -307,6 +321,10 @@ const styles = StyleSheet.create({
   iconRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  wordmarkWrap: {
+    position: 'absolute',
+    overflow: 'hidden',
   },
   mottoWrap: {
     overflow: 'hidden',

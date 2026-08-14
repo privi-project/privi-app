@@ -17,9 +17,30 @@ export const PRIVI_EASE = 'cubic-bezier(0.45, 0, 0.2, 1)';
 const STAGE_OVERLAP = 150;
 
 const stage2End = 1000 + 750;
-const stage3Start = stage2End - STAGE_OVERLAP;
+// 2026-08-12: stage3 (wordmark width growth) NO LONGER overlaps stage2
+// (icon shrink) — confirmed live on a real device that the wordmark
+// wasn't animating progressively at all, just snapping to fully-revealed
+// once the whole sequence finished, despite the images themselves
+// loading fine (ruled out via onLoad/onError diagnostics) and the
+// animation timer firing correctly (ruled out via a stage3 console.log).
+// Both stage2 and stage3 animate LAYOUT-affecting properties (height and
+// width respectively) on sibling elements in the same flexDirection:row
+// container — Android's layout engine appears to drop/batch the
+// wordmark's progressive width updates when both are running
+// simultaneously (the 150ms overlap window). Starting stage3 only once
+// stage2 has fully finished removes that contention. Adds 150ms to the
+// total sequence (~3.7s -> ~3.85s), imperceptible.
+const stage3Start = stage2End;
 const stage3End = stage3Start + 750;
-const stage4Start = stage3End - STAGE_OVERLAP;
+// 2026-08-12: stage4 (lockup translateY + motto) also no longer overlaps
+// stage3 (wordmark fade). Same category of issue as the stage2/stage3
+// fix above, but parent-child rather than sibling-sibling — the lockup
+// (an ANCESTOR of the wordmark) was being transformed at the same
+// moment the wordmark itself was trying to fade in via the native
+// driver. Untested whether this is actually the cause; removing the
+// overlap here is cheap and low-risk regardless. Adds another 150ms to
+// the total sequence.
+const stage4Start = stage3End;
 const stage4End = stage4Start + 1000;
 
 export const SPLASH_ANIMATION = {
