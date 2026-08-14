@@ -38,6 +38,7 @@ import {
 } from '@/services/businesses';
 import { fetchActiveSeasonBanner, SeasonBanner as SeasonBannerData } from '@/services/banners';
 import { useAuthStore } from '@/store/auth';
+import { useHomeResetStore } from '@/store/homeReset';
 import { useNotificationDot } from '@/hooks/useNotificationDot';
 
 // Matches search_bar_animation.html exactly: bar contracts 100%->70% over
@@ -244,6 +245,23 @@ export default function HomeScreen() {
     }
   }, [queryInput]);
 
+  // Resets every active filter/search back to the default feed — tapping
+  // a category or the season banner previously had no way back to this
+  // state short of manually clearing search or deselecting the category.
+  // Triggered either directly (header logo/wordmark tap below) or via
+  // useHomeResetStore (Home tab icon tap, from the Tabs layout).
+  const resetToDefaultHome = () => {
+    handleClearSearch();
+    setSelectedCategoryId(null);
+    setBannerCategoryIds(null);
+  };
+
+  const resetSignal = useHomeResetStore((s) => s.resetSignal);
+  useEffect(() => {
+    if (resetSignal === 0) return; // 0 = initial store value, not a real tap
+    resetToDefaultHome();
+  }, [resetSignal]);
+
   const handleBannerPress = (banner: SeasonBannerData) => {
     if (banner.action_type === 'external_link' && banner.action_url) {
       Linking.openURL(banner.action_url);
@@ -288,7 +306,9 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
-        <BrandMark size="sm" on={isDark ? 'dark' : 'light'} />
+        <Pressable onPress={resetToDefaultHome} hitSlop={8}>
+          <BrandMark size="sm" on={isDark ? 'dark' : 'light'} />
+        </Pressable>
         <Pressable
           style={styles.bellButton}
           onPress={() => setNotificationsVisible(true)}
@@ -406,46 +426,59 @@ export default function HomeScreen() {
       </ScrollView>
 
       <Animated.View style={[styles.resultsSection, { opacity: resultsOpacity }]}>
-        {!hasSearched && seasonBanner && (
-          <SeasonBanner banner={seasonBanner} onPress={handleBannerPress} />
-        )}
+        {/* 2026-08-13: SeasonBanner + heading/results-row used to render
+            here as fixed siblings above the FlatList, eating permanent
+            vertical space instead of scrolling away with the cards below
+            them (reported: "sits like a frozen pane"). Moved into the
+            FlatList's own ListHeaderComponent so they scroll with
+            everything else — ListEmptyComponent replaces the old
+            loading/empty ternary so the header still shows during those
+            states instead of disappearing along with the list. */}
+        <FlatList
+          data={loading ? [] : displayedBusinesses}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.gold} />
+          }
+          ListHeaderComponent={
+            <>
+              {!hasSearched && seasonBanner && (
+                <SeasonBanner banner={seasonBanner} onPress={handleBannerPress} />
+              )}
 
-        {hasSearched ? (
-          <View style={styles.resultsRow}>
-            <Text style={[styles.resultsCount, { color: textColor }]}>
-              {loading
-                ? 'Searching…'
-                : `${displayedBusinesses.length} results${activeQuery ? ` for "${activeQuery}"` : ''}`}
-            </Text>
-            <Pressable onPress={handleClearSearch}>
-              <GoldGradientText style={styles.clearLink}>Clear</GoldGradientText>
-            </Pressable>
-          </View>
-        ) : (
-          <GoldGradientText style={styles.sectionHeading}>EXPLORE BUSINESSES</GoldGradientText>
-        )}
-
-        {loading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.teal} />
-        ) : displayedBusinesses.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyTitle, { color: textColor }]}>No businesses found</Text>
-            <Text style={[styles.emptySubtitle, { color: placeholderColor }]}>
-              {favouritesOnly
-                ? 'No favourites match your other filters yet.'
-                : 'Try changing your search or explore different categories.'}
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={displayedBusinesses}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.gold} />
-            }
-            renderItem={({ item }) => (
+              {hasSearched ? (
+                <View style={styles.resultsRow}>
+                  <Text style={[styles.resultsCount, { color: textColor }]}>
+                    {loading
+                      ? 'Searching…'
+                      : `${displayedBusinesses.length} results${activeQuery ? ` for "${activeQuery}"` : ''}`}
+                  </Text>
+                  <Pressable onPress={handleClearSearch}>
+                    <GoldGradientText style={styles.clearLink}>Clear</GoldGradientText>
+                  </Pressable>
+                </View>
+              ) : (
+                <GoldGradientText style={styles.sectionHeading}>EXPLORE BUSINESSES</GoldGradientText>
+              )}
+            </>
+          }
+          ListEmptyComponent={
+            loading ? (
+              <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.teal} />
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyTitle, { color: textColor }]}>No businesses found</Text>
+                <Text style={[styles.emptySubtitle, { color: placeholderColor }]}>
+                  {favouritesOnly
+                    ? 'No favourites match your other filters yet.'
+                    : 'Try changing your search or explore different categories.'}
+                </Text>
+              </View>
+            )
+          }
+          renderItem={({ item }) => (
               <Pressable
                 style={[styles.businessCard, { backgroundColor: cardBg }]}
                 onPress={() => router.push(`/business/${item.id}`)}
@@ -483,7 +516,6 @@ export default function HomeScreen() {
               </Pressable>
             )}
           />
-        )}
       </Animated.View>
 
       <NotificationPanel
@@ -610,10 +642,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   resultsRow: {
+    // No horizontal padding of its own (2026-08-13) — now rendered
+    // inside the FlatList's ListHeaderComponent, so horizontal inset
+    // comes from listContent's contentContainerStyle padding instead
+    // (see the SeasonBanner scrolling fix above).
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     marginBottom: 10,
   },
   resultsCount: {
@@ -625,10 +660,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   sectionHeading: {
+    // Same as resultsRow above — no self-padding, inherits from
+    // listContent now that it's inside ListHeaderComponent.
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
-    paddingHorizontal: 20,
     marginBottom: 10,
   },
   listContent: {
