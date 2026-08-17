@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { getCurrentPosition } from './location';
+import { isCurrentlyLive } from './offers';
 import * as Location from 'expo-location';
 
 export interface Category {
@@ -86,6 +87,7 @@ interface FetchBusinessesOptions {
   memberLocation?: Coordinates | null;
   maxDistanceMiles?: number | null;
   accessibleOnly?: boolean;
+  onlineOfferOnly?: boolean;
 }
 
 export async function fetchBusinesses({
@@ -94,6 +96,7 @@ export async function fetchBusinesses({
   memberLocation,
   maxDistanceMiles,
   accessibleOnly,
+  onlineOfferOnly,
 }: FetchBusinessesOptions): Promise<BusinessCard[]> {
   const hasCategoryFilter = !!categoryIds && categoryIds.length > 0;
 
@@ -125,8 +128,33 @@ export async function fetchBusinesses({
     query = query.or(`name.ilike.%${term}%,search_keywords.ilike.%${term}%`);
   }
 
-  const { data, error } = await query;
+  // Unlike accessibleOnly, this genuinely needs a second table — offers
+  // aren't joined into the businesses query at all otherwise. Run it in
+  // parallel with the main query since neither depends on the other.
+  const onlineOffersQuery = onlineOfferOnly
+    ? supabase
+        .from('offers')
+        .select('business_id, start_date, expiry_date')
+        .eq('status', 'active')
+        .in('redeem_where', ['online', 'both'])
+    : null;
+
+  const [{ data, error }, onlineOffersResult] = await Promise.all([
+    query,
+    onlineOffersQuery ?? Promise.resolve({ data: null, error: null }),
+  ]);
   if (error) throw error;
+  if (onlineOffersResult.error) throw onlineOffersResult.error;
+
+  // A business qualifies if it has at least one active, currently-live
+  // (not expired, not scheduled-for-the-future) offer redeemable online.
+  const onlineOfferBusinessIds = onlineOfferOnly
+    ? new Set(
+        (onlineOffersResult.data ?? [])
+          .filter(isCurrentlyLive)
+          .map((o: any) => o.business_id as string),
+      )
+    : null;
 
   const cards: BusinessCard[] = (data ?? []).map((b: any) => {
     const activeLocations = (b.business_locations ?? []).filter(

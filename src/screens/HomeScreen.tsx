@@ -21,7 +21,7 @@ import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { HOME_HEADER_TOP_PADDING } from '@/constants/animations';
 import { BrandMark } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
-import { BellIcon, SearchIcon, HeartIcon } from '@/components/NavIcons';
+import { BellIcon, SearchIcon, HeartIcon, GlobeIcon } from '@/components/NavIcons';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { FilterModal } from '@/components/FilterModal';
@@ -63,6 +63,12 @@ export default function HomeScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedDistance, setSelectedDistance] = useState<number | null>(null);
   const [accessibleOnly, setAccessibleOnly] = useState(false);
+  // Not a real category — a business isn't "in the online offers category,"
+  // one of its OFFERS is online-redeemable (same reasoning as why
+  // accessibility lives per-location, not per-business). Rendered as a
+  // chip in the category row purely for visual prominence/one-tap access,
+  // wired straight to fetchBusinesses' own onlineOfferOnly filter.
+  const [onlineOfferOnly, setOnlineOfferOnly] = useState(false);
   const [favouritesOnly, setFavouritesOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -126,6 +132,7 @@ export default function HomeScreen() {
           memberLocation,
           maxDistanceMiles: selectedDistance,
           accessibleOnly,
+          onlineOfferOnly,
         }),
         user ? fetchFavouriteIds(user.id) : Promise.resolve(new Set<string>()),
       ]);
@@ -137,7 +144,7 @@ export default function HomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user, effectiveCategoryIds, activeQuery, selectedDistance, accessibleOnly]);
+  }, [user, effectiveCategoryIds, activeQuery, selectedDistance, accessibleOnly, onlineOfferOnly]);
 
   // Favourites-only narrows the already-fetched (category/search/distance/
   // accessibility-filtered) list client-side — favouriteIds is already
@@ -381,6 +388,27 @@ export default function HomeScreen() {
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryRow}
       >
+        <Pressable
+          key="online-offers"
+          style={styles.categoryItem}
+          onPress={() => setOnlineOfferOnly((v) => !v)}
+        >
+          <GoldGradientBorder
+            borderWidth={1.5}
+            borderRadius={26}
+            backgroundColor={onlineOfferOnly ? COLORS.teal : backgroundColor}
+            style={styles.categoryCircle}
+            fillHeight
+          >
+            <View style={styles.categoryCircleContent}>
+              <GlobeIcon size={26} color={COLORS.gold} />
+            </View>
+          </GoldGradientBorder>
+          <Text style={[styles.categoryLabel, { color: textColor }]} numberOfLines={2}>
+            Online offers
+          </Text>
+        </Pressable>
+
         {categories.map((cat) => {
           const isSelected = selectedCategoryId === cat.id;
           return (
