@@ -10,7 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { COLORS } from '@/constants/colors';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import {
@@ -80,7 +80,6 @@ export default function BusinessScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
     setFailed(false);
     try {
       const memberLocation = user ? await getMemberLocation(user.id) : null;
@@ -105,8 +104,23 @@ export default function BusinessScreen() {
   }, [id, user]);
 
   useEffect(() => {
+    setLoading(true);
     load();
   }, [load]);
+
+  // Business detail was fetched once on mount and never again — editing an
+  // offer's redeem_where (or anything else about the business) in the
+  // Admin Portal while a member already has this screen open under them
+  // in the stack would never show up without a full app restart. Same
+  // pattern as HomeScreen's own focus refresh: load() doesn't toggle the
+  // spinner itself (only the mount effect above does), so this refreshes
+  // silently rather than flashing a loading screen every time you come
+  // back to a business you've already viewed.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const handleToggleFavourite = async () => {
     if (!user || !business) return;

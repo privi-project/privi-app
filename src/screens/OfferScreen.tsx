@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import * as ScreenCapture from 'expo-screen-capture';
 import { COLORS } from '@/constants/colors';
 import { ChevronLeftIcon, ClockIcon, GiftIcon, ShieldCheckIcon } from '@/components/NavIcons';
@@ -69,7 +69,6 @@ export default function OfferScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
     setFailed(false);
     try {
       const detail = await fetchOfferDetail(id);
@@ -87,8 +86,21 @@ export default function OfferScreen() {
   }, [id]);
 
   useEffect(() => {
+    setLoading(true);
     load();
   }, [load]);
+
+  // Same staleness issue as BusinessScreen — an offer edited in the Admin
+  // Portal (e.g. its redeem_where) while a member already has this screen
+  // open under them in the stack never showed up without a full restart.
+  // load() doesn't set loading itself (only the mount effect above does),
+  // so this refreshes silently rather than flashing the spinner every
+  // time you come back to an offer you've already viewed.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const bars = useMemo(() => barWidths(offer?.redemption_value ?? ''), [offer?.redemption_value]);
 
