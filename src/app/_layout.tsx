@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, AppState } from 'react-native';
+import { View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationBar } from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -33,26 +32,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     hydrateTheme();
-  }, []);
-
-  // Immersive mode (Android only — expo-navigation-bar no-ops elsewhere):
-  // the system nav bar starts hidden via the expo-navigation-bar config
-  // plugin (app.json), but Android can bring it back (swiping it up is
-  // meant to be a temporary peek, but some OEM skins/scenarios don't
-  // reliably auto-rehide it, e.g. after backgrounding). Re-asserting
-  // hidden on mount and whenever the app returns to the foreground
-  // matches how other apps keep it consistently minimised during use.
-  // Re-enabled 2026-08-13 for the first EAS build that actually includes
-  // this native module (was disabled for live Metro testing since the
-  // dev-client on the test phone predated it and crashed on import).
-  useEffect(() => {
-    NavigationBar.setHidden(true);
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        NavigationBar.setHidden(true);
-      }
-    });
-    return () => subscription.remove();
   }, []);
 
   useEffect(() => {
