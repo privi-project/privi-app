@@ -4,6 +4,7 @@ export interface OfferSummary {
   id: string;
   title: string;
   value_summary: string | null;
+  redeem_where: 'in_store' | 'online' | 'both';
 }
 
 export interface OfferDetail {
@@ -22,7 +23,7 @@ export interface OfferDetail {
 // businesses (see offers' "Anyone can view active, unexpired offers..."
 // policy) — the client-side date check here is defense-in-depth, same
 // pattern as location.ts's postcode shape check, not the primary guard.
-function isCurrentlyLive(o: { expiry_date?: string | null; start_date?: string | null }): boolean {
+export function isCurrentlyLive(o: { expiry_date?: string | null; start_date?: string | null }): boolean {
   const today = new Date().toISOString().slice(0, 10);
   if (o.expiry_date && o.expiry_date < today) return false;
   if (o.start_date && o.start_date > today) return false;
@@ -32,7 +33,7 @@ function isCurrentlyLive(o: { expiry_date?: string | null; start_date?: string |
 export async function fetchBusinessOffers(businessId: string): Promise<OfferSummary[]> {
   const { data, error } = await supabase
     .from('offers')
-    .select('id, title, value_summary, expiry_date, start_date, created_at')
+    .select('id, title, value_summary, redeem_where, expiry_date, start_date, created_at')
     .eq('business_id', businessId)
     .eq('status', 'active')
     .order('created_at', { ascending: false });
@@ -41,7 +42,7 @@ export async function fetchBusinessOffers(businessId: string): Promise<OfferSumm
 
   return (data ?? [])
     .filter(isCurrentlyLive)
-    .map((o) => ({ id: o.id, title: o.title, value_summary: o.value_summary }));
+    .map((o) => ({ id: o.id, title: o.title, value_summary: o.value_summary, redeem_where: o.redeem_where }));
 }
 
 export async function fetchOfferDetail(offerId: string): Promise<OfferDetail | null> {

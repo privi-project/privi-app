@@ -294,7 +294,17 @@ export default function BusinessScreen() {
                       <PercentBadgeIcon color={COLORS.gold} />
                     </View>
                     <View style={styles.offerText}>
-                      <Text style={styles.offerTitle}>{offer.title}</Text>
+                      <View style={styles.offerTitleRow}>
+                        <Text style={styles.offerTitle}>{offer.title}</Text>
+                        {offer.redeem_where !== 'in_store' && (
+                          <View style={styles.onlineBadge}>
+                            <GlobeIcon color={COLORS.teal} size={11} />
+                            <Text style={styles.onlineBadgeText}>
+                              {offer.redeem_where === 'online' ? 'Online only' : '+ Online'}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       {offer.value_summary &&
                       offer.value_summary.trim().toLowerCase() !== offer.title.trim().toLowerCase() ? (
                         <Text style={styles.offerSubtitle}>{offer.value_summary}</Text>
@@ -488,11 +498,32 @@ const styles = StyleSheet.create({
   offerText: {
     flex: 1,
   },
+  offerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 2,
+  },
   offerTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.ivory,
-    marginBottom: 2,
+  },
+  onlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(111,167,161,0.2)',
+  },
+  onlineBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.teal,
+    letterSpacing: 0.2,
   },
   offerSubtitle: {
     fontSize: 12,
