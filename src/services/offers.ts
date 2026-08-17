@@ -15,6 +15,7 @@ export interface OfferDetail {
   terms: string | null;
   redemption_method: 'discount_code' | 'barcode';
   redemption_value: string | null;
+  redeem_where: 'in_store' | 'online' | 'both';
 }
 
 // RLS already restricts reads to active, unexpired offers of active
@@ -46,7 +47,7 @@ export async function fetchBusinessOffers(businessId: string): Promise<OfferSumm
 export async function fetchOfferDetail(offerId: string): Promise<OfferDetail | null> {
   const { data, error } = await supabase
     .from('offers')
-    .select('id, business_id, title, value_summary, availability, terms, redemption_method, redemption_value, expiry_date, start_date')
+    .select('id, business_id, title, value_summary, availability, terms, redemption_method, redemption_value, redeem_where, expiry_date, start_date')
     .eq('id', offerId)
     .eq('status', 'active')
     .single();
@@ -62,5 +63,6 @@ export async function fetchOfferDetail(offerId: string): Promise<OfferDetail | n
     terms: data.terms,
     redemption_method: data.redemption_method,
     redemption_value: data.redemption_value,
+    redeem_where: data.redeem_where,
   };
 }

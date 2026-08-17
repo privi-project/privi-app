@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platf
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ScreenCapture from 'expo-screen-capture';
 import { COLORS } from '@/constants/colors';
-import { ChevronLeftIcon, ClockIcon, GiftIcon, ShieldCheckIcon, PercentBadgeIcon } from '@/components/NavIcons';
+import { ChevronLeftIcon, ClockIcon, GiftIcon, ShieldCheckIcon, PercentBadgeIcon, StorefrontIcon, GlobeIcon } from '@/components/NavIcons';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { OfferDetail, fetchOfferDetail } from '@/services/offers';
@@ -15,6 +15,15 @@ import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 const REDEEM_INSTRUCTIONS: Record<OfferDetail['redemption_method'], string> = {
   barcode: 'Show this offer before payment.',
   discount_code: 'Show this code before payment.',
+};
+
+// Separate from HOW TO REDEEM above — that's about presenting the code/
+// barcode, this is about where it can actually be used. A business with a
+// physical location can still take bookings/orders online.
+const REDEEM_WHERE_LABELS: Record<OfferDetail['redeem_where'], string> = {
+  in_store: 'In person',
+  online: 'Online',
+  both: 'In person or online',
 };
 
 // Deterministic decorative bar pattern from the code string — this is not
@@ -151,6 +160,20 @@ export default function OfferScreen() {
             <Text style={[styles.detailLabel, { color: textColor }]}>HOW TO REDEEM</Text>
             <Text style={[styles.detailBody, { color: subColor }]}>
               {REDEEM_INSTRUCTIONS[offer.redemption_method]}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.detailRow}>
+          {offer.redeem_where === 'in_store' ? (
+            <StorefrontIcon color={COLORS.gold} size={20} />
+          ) : (
+            <GlobeIcon color={COLORS.gold} size={20} />
+          )}
+          <View style={styles.detailText}>
+            <Text style={[styles.detailLabel, { color: textColor }]}>WHERE</Text>
+            <Text style={[styles.detailBody, { color: subColor }]}>
+              {REDEEM_WHERE_LABELS[offer.redeem_where]}
             </Text>
           </View>
         </View>
