@@ -217,9 +217,17 @@ export async function fetchBusinesses({
     ? cards.filter((c: any) => c._matchedLocationAccessible)
     : cards;
 
+  // Bug fixed 2026-08-18: onlineOfferBusinessIds was computed above but
+  // never actually applied — the filter chip toggled with no effect,
+  // showing every business regardless of whether it had a qualifying
+  // offer. This is the step that was missing.
+  const onlineOfferFiltered = onlineOfferOnly
+    ? accessibilityFiltered.filter((c: any) => onlineOfferBusinessIds!.has(c.id))
+    : accessibilityFiltered;
+
   const tierRank: Record<FeaturedLevel, number> = { global: 2, category: 1, none: 0 };
 
-  accessibilityFiltered.sort((a: any, b: any) => {
+  onlineOfferFiltered.sort((a: any, b: any) => {
     const tierDiff = tierRank[b.featuredLevel as FeaturedLevel] - tierRank[a.featuredLevel as FeaturedLevel];
     if (tierDiff !== 0) return tierDiff;
 
@@ -236,7 +244,7 @@ export async function fetchBusinesses({
     return a.distanceMiles - b.distanceMiles;
   });
 
-  const result = accessibilityFiltered.map(
+  const result = onlineOfferFiltered.map(
     ({ _featuredAt, _matchedLocationAccessible, ...card }: any) => card as BusinessCard
   );
 
