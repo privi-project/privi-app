@@ -25,6 +25,7 @@ import {
   AccessibilityIcon,
 } from '@/components/NavIcons';
 import { ActionSheet } from '@/components/ActionSheet';
+import { OfferTypeIcon } from '@/components/OfferTypeIcon';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import {
@@ -304,7 +305,7 @@ export default function BusinessScreen() {
                 <GoldGradientBorder borderWidth={1.5} borderRadius={14} backgroundColor={cardBg}>
                   <View style={styles.offerCardInner}>
                     <View style={styles.offerIcon}>
-                      <Text style={styles.offerIconPercent}>%</Text>
+                      <OfferTypeIcon offerType={offer.offer_type} color={COLORS.gold} size={16} />
                     </View>
                     <View style={styles.offerText}>
                       <View style={styles.offerTitleRow}>
@@ -507,11 +508,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  offerIconPercent: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.gold,
   },
   offerText: {
     flex: 1,

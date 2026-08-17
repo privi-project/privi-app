@@ -5,6 +5,7 @@ export interface OfferSummary {
   title: string;
   value_summary: string | null;
   redeem_where: 'in_store' | 'online' | 'both';
+  offer_type: string;
 }
 
 export interface OfferDetail {
@@ -17,6 +18,7 @@ export interface OfferDetail {
   redemption_method: 'discount_code' | 'barcode';
   redemption_value: string | null;
   redeem_where: 'in_store' | 'online' | 'both';
+  offer_type: string;
 }
 
 // RLS already restricts reads to active, unexpired offers of active
@@ -33,7 +35,7 @@ export function isCurrentlyLive(o: { expiry_date?: string | null; start_date?: s
 export async function fetchBusinessOffers(businessId: string): Promise<OfferSummary[]> {
   const { data, error } = await supabase
     .from('offers')
-    .select('id, title, value_summary, redeem_where, expiry_date, start_date, created_at')
+    .select('id, title, value_summary, redeem_where, offer_type, expiry_date, start_date, created_at')
     .eq('business_id', businessId)
     .eq('status', 'active')
     .order('created_at', { ascending: false });
@@ -42,13 +44,19 @@ export async function fetchBusinessOffers(businessId: string): Promise<OfferSumm
 
   return (data ?? [])
     .filter(isCurrentlyLive)
-    .map((o) => ({ id: o.id, title: o.title, value_summary: o.value_summary, redeem_where: o.redeem_where }));
+    .map((o) => ({
+      id: o.id,
+      title: o.title,
+      value_summary: o.value_summary,
+      redeem_where: o.redeem_where,
+      offer_type: o.offer_type,
+    }));
 }
 
 export async function fetchOfferDetail(offerId: string): Promise<OfferDetail | null> {
   const { data, error } = await supabase
     .from('offers')
-    .select('id, business_id, title, value_summary, availability, terms, redemption_method, redemption_value, redeem_where, expiry_date, start_date')
+    .select('id, business_id, title, value_summary, availability, terms, redemption_method, redemption_value, redeem_where, offer_type, expiry_date, start_date')
     .eq('id', offerId)
     .eq('status', 'active')
     .single();
@@ -65,5 +73,6 @@ export async function fetchOfferDetail(offerId: string): Promise<OfferDetail | n
     redemption_method: data.redemption_method,
     redemption_value: data.redemption_value,
     redeem_where: data.redeem_where,
+    offer_type: data.offer_type,
   };
 }

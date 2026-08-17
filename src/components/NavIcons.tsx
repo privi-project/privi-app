@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 
 interface IconProps {
   color: string;
@@ -399,6 +399,29 @@ export function MyLocationIcon({ color, size = 20 }: IconProps) {
         strokeWidth={2}
         strokeLinecap="round"
       />
+    </Svg>
+  );
+}
+
+// Bundle offer type. Started as two overlapping squares (matched the
+// existing accessibility/tag icon style) but founder-tested that read as
+// a "copy/duplicate" icon rather than "multiple items" — replaced with a
+// stacked-bars shape, visually distinct from both that and GiftIcon.
+export function StackIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="5" y="15" width="14" height="4" rx="1.5" stroke={color} strokeWidth={1.6} />
+      <Rect x="6.5" y="10" width="11" height="4" rx="1.5" stroke={color} strokeWidth={1.6} />
+      <Rect x="8" y="5" width="8" height="4" rx="1.5" stroke={color} strokeWidth={1.6} />
+    </Svg>
+  );
+}
+
+// Upgrade offer type.
+export function ArrowUpIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 19V5M6 11l6-6 6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
