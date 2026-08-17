@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platf
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ScreenCapture from 'expo-screen-capture';
 import { COLORS } from '@/constants/colors';
-import { ChevronLeftIcon, ClockIcon, GiftIcon, ShieldCheckIcon, PercentBadgeIcon } from '@/components/NavIcons';
+import { ChevronLeftIcon, ClockIcon, GiftIcon, ShieldCheckIcon } from '@/components/NavIcons';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { OfferDetail, fetchOfferDetail } from '@/services/offers';
@@ -139,7 +139,7 @@ export default function OfferScreen() {
         <GoldGradientBorder borderWidth={1.5} borderRadius={16} backgroundColor={COLORS.teal} style={styles.summaryCard}>
           <View style={styles.summaryCardInner}>
             <View style={styles.summaryIcon}>
-              <PercentBadgeIcon color={COLORS.gold} size={28} />
+              <Text style={styles.summaryIconPercent}>%</Text>
             </View>
             <Text style={styles.summaryTitle}>{offer.title}</Text>
             {showValueSummary ? <Text style={styles.summarySubtitle}>{offer.value_summary}</Text> : null}
@@ -252,6 +252,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+  },
+  summaryIconPercent: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.gold,
   },
   summaryTitle: {
     fontSize: 20,

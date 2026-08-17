@@ -21,7 +21,6 @@ import {
   PhoneIcon,
   ClockIcon,
   GlobeIcon,
-  PercentBadgeIcon,
   LocateIcon,
   AccessibilityIcon,
 } from '@/components/NavIcons';
@@ -291,7 +290,7 @@ export default function BusinessScreen() {
                 <GoldGradientBorder borderWidth={1.5} borderRadius={14} backgroundColor={cardBg}>
                   <View style={styles.offerCardInner}>
                     <View style={styles.offerIcon}>
-                      <PercentBadgeIcon color={COLORS.gold} />
+                      <Text style={styles.offerIconPercent}>%</Text>
                     </View>
                     <View style={styles.offerText}>
                       <View style={styles.offerTitleRow}>
@@ -494,6 +493,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  offerIconPercent: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.gold,
   },
   offerText: {
     flex: 1,

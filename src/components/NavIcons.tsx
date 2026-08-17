@@ -402,17 +402,3 @@ export function MyLocationIcon({ color, size = 20 }: IconProps) {
     </Svg>
   );
 }
-
-export function PercentBadgeIcon({ color, size = 22 }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 2l2 1.3 2.3-.6 1.3 2 2.3.7-.1 2.4 1.5 1.9-1.5 1.9.1 2.4-2.3.7-1.3 2-2.3-.6L12 22l-2-1.3-2.3.6-1.3-2-2.3-.7.1-2.4L2.7 14l1.5-1.9-.1-2.4 2.3-.7 1.3-2 2.3.6L12 2z"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
-      <Path d="M9 15l6-6M9.5 10a.75.75 0 100-1.5.75.75 0 000 1.5zM14.5 15.5a.75.75 0 100-1.5.75.75 0 000 1.5z" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
-    </Svg>
-  );
-}
