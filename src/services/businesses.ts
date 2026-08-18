@@ -103,7 +103,7 @@ export async function fetchBusinesses({
   let query = supabase
     .from('businesses')
     .select(
-      `id, name, short_description, logo_url, featured_level, featured_at,
+      `id, name, short_description, logo_url, featured_level, featured_at, featured_expires_at,
        business_categories!inner(category_id),
        business_locations(latitude, longitude, status, is_accessible)`
     )
@@ -190,14 +190,23 @@ export async function fetchBusinesses({
           })
         : null;
 
+    // A featured business whose paid term has lapsed stops boosting here
+    // even if the Admin Portal record still says featured_level !== 'none'
+    // — same computed-at-read-time pattern as the Admin Portal's own
+    // effectiveFeaturedLevel(). The founder doesn't have to remember to
+    // manually reset it the moment a term ends.
+    const featuredIsLive =
+      b.featured_level !== 'none' &&
+      (!b.featured_expires_at || new Date(b.featured_expires_at) > new Date());
+
     // 'category'-tier featured only counts as featured within a
     // category-filtered view — the inner-join-with-.in() filter above
     // already guarantees every returned row belongs to one of the
     // requested categories, so no extra membership check is needed here.
     const featuredLevel: FeaturedLevel =
-      b.featured_level === 'global'
+      featuredIsLive && b.featured_level === 'global'
         ? 'global'
-        : b.featured_level === 'category' && hasCategoryFilter
+        : featuredIsLive && b.featured_level === 'category' && hasCategoryFilter
           ? 'category'
           : 'none';
 
