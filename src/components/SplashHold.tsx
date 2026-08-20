@@ -2,9 +2,11 @@ import React from 'react';
 import { View, Image, StyleSheet, Dimensions } from 'react-native';
 import { COLORS } from '@/constants/colors';
 
-const LOGO_RATIO = 1218 / 1536;
+const LOGO_RATIO = 915 / 1241; // updated 2026-08-19 for the Refined Privi Logo replacement
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const ICON_START_HEIGHT = SCREEN_HEIGHT * 0.2;
+// Kept in sync with SplashAnimation.tsx's ICON_START_HEIGHT (0.2 -> 0.15,
+// 2026-08-20 — opening icon read as too big per user feedback).
+const ICON_START_HEIGHT = SCREEN_HEIGHT * 0.15;
 
 /**
  * Static frame matching SplashAnimation's Stage 1 exactly (teal bg, icon

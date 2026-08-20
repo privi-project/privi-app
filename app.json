@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.privi.app",
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Privi uses your location to show you nearby Member Benefits.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Privi uses your location to show you nearby Member Benefits."

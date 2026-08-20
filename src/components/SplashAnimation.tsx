@@ -32,20 +32,25 @@ interface SplashAnimationProps {
 }
 
 // Same source-asset ratios as BrandMark (see BrandMark.tsx / website memory)
-const LOGO_RATIO = 1218 / 1536;
+// Updated 2026-08-19 for the "Refined Privi Logo" replacement (915x1241).
+const LOGO_RATIO = 915 / 1241;
 const WORDMARK_DARK_RATIO = 898 / 453;
 const WORDMARK_LIGHT_RATIO = 951 / 489;
 const WORDMARK_HEIGHT_STRETCH = 62 / 56;
 
 // Final sizes match BrandMark exactly (same values as BrandMark.tsx) for
-// each destination, so there's no size jump at handoff.
+// each destination, so there's no size jump at handoff. gap values updated
+// 2026-08-20 alongside BrandMark's WORDMARK_MARGIN_PX retune (sm:4->9,
+// md:6->13) — keep these in sync if either changes.
 const FINAL_SIZES = {
-  welcome: { iconHeight: 74, wordmarkBaseHeight: 56, gap: 6 },
-  home: { iconHeight: 49, wordmarkBaseHeight: 37, gap: 4 },
+  welcome: { iconHeight: 74, wordmarkBaseHeight: 56, gap: 13 },
+  home: { iconHeight: 49, wordmarkBaseHeight: 37, gap: 9 },
 } as const;
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
-const ICON_START_HEIGHT = SCREEN_HEIGHT * 0.2;
+// 0.2 -> 0.15 (2026-08-20): opening icon read as too big per user feedback.
+// Keep in sync with SplashHold.tsx, which mirrors this as a static frame.
+const ICON_START_HEIGHT = SCREEN_HEIGHT * 0.15;
 
 // Home's header logo sits at HOME_HEADER_TOP_PADDING + half its own
 // height from the top of the screen — see constants/animations.ts.
@@ -91,6 +96,16 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
   // exactly (see stage3's comment below), since that's the one animated
   // dimension proven to actually paint on this device.
   const wordmarkRevealWidth = useSharedValue(0);
+  // 2026-08-20: the icon was staying put while wordmarkRevealWidth grew the
+  // clip window to its right — visually that drags the whole group's centre
+  // rightward as the wordmark appears, since the icon (the original, single
+  // centred element) never moves. This counter-shifts iconRow left by half
+  // of the reveal's final width, in lockstep with the same reveal, so the
+  // icon+wordmark pair ends up centred on the exact point the icon alone
+  // started at — the same result as if the FINAL combined lockup had been
+  // centred as one unit (matching how BrandMark centres itself statically
+  // on Welcome/Home/Sign-in's own headers).
+  const iconRowShiftX = useSharedValue(0);
   const lockupTranslateY = useSharedValue(0);
   const mottoHeight = useSharedValue(0);
   const mottoTranslateY = useSharedValue(-10);
@@ -112,6 +127,10 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
     wordmarkRevealWidth.value = withDelay(
       SPLASH_ANIMATION.stage3Start,
       withTiming(wordmarkClipFinalWidth, { duration: SPLASH_ANIMATION.stage3Duration, easing: EASING })
+    );
+    iconRowShiftX.value = withDelay(
+      SPLASH_ANIMATION.stage3Start,
+      withTiming(-wordmarkClipFinalWidth / 2, { duration: SPLASH_ANIMATION.stage3Duration, easing: EASING })
     );
 
     // Stage 4: move up to the destination's resting position.
@@ -186,6 +205,10 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
     transform: [{ translateY: lockupTranslateY.value }],
   }));
 
+  const iconRowAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: iconRowShiftX.value }],
+  }));
+
   const iconAnimatedStyle = useAnimatedStyle(() => ({
     width: iconSize.value,
     height: iconSize.value,
@@ -226,7 +249,7 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
   return (
     <Animated.View style={[styles.container, containerAnimatedStyle]}>
       <Animated.View style={[styles.lockup, lockupAnimatedStyle]}>
-        <Animated.View style={styles.iconRow}>
+        <Animated.View style={[styles.iconRow, iconRowAnimatedStyle]}>
           <Animated.Image
             source={require('../../assets/brand/privi-logo.png')}
             resizeMode="contain"

@@ -3,7 +3,9 @@ import { View, Image, StyleSheet } from 'react-native';
 
 // Intrinsic aspect ratios of the source PNG exports (same assets as website,
 // see website/src/components/brand-mark.tsx — this is a direct port).
-const LOGO_RATIO = 1218 / 1536;
+// LOGO_RATIO updated 2026-08-19 for the "Refined Privi Logo" replacement
+// (915x1241, trimmed to real content bounds).
+const LOGO_RATIO = 915 / 1241;
 const WORDMARK_DARK_RATIO = 898 / 453;
 const WORDMARK_LIGHT_RATIO = 951 / 489;
 
@@ -18,15 +20,22 @@ const WORDMARK_HEIGHT_STRETCH = 62 / 56;
 const WORDMARK_BASE_HEIGHT_PX = { sm: 37, md: 56, lg: 80 };
 
 // Gap between icon and wordmark. The website's own screenshot-calibrated
-// negative margins (sm:-4, md:-18, lg:19) do NOT transfer to React Native's
-// Image renderer — tested directly (4-5x zoom screenshots) and the ported
-// values caused the icon's tail to visibly overlap the wordmark's "p" at
-// both sm and md. RN's "contain" fit crops each source PNG's transparent
-// edge padding differently than the website's <img>, so the same px value
-// produces a different visual gap. Recalibrated for RN specifically — 0 was
-// confirmed clean/non-overlapping; bumped to a small positive gap per user
-// feedback wanting more breathing room between icon and wordmark.
-const WORDMARK_MARGIN_PX = { sm: 4, md: 6, lg: 10 };
+// negative margins do NOT transfer to React Native's Image renderer —
+// tested directly (4-5x zoom screenshots) with the OLD logo asset and the
+// ported values caused the icon's tail to visibly overlap the wordmark's
+// "p" at both sm and md, so this has always been calibrated separately
+// from the website.
+//
+// 2026-08-20 ("Refined Privi Logo" swap): sm:4/md:6 read as too tight per
+// user feedback looking at real Welcome/sign-in renders. Retuned to match
+// the website's own gap:iconHeight ratio (~0.18, consistent across its
+// md/lg) rather than guessing a new absolute value — sm: 49*0.18≈9,
+// md: 74*0.18≈13. The new master logo (915x1241, trimmed to real content
+// bounds) crops far more predictably under resizeMode="contain" than the
+// old asset did, so this ratio-based approach is safe now even though the
+// original cross-renderer warning above (don't port website px values
+// verbatim) still holds for any future logo replacement.
+const WORDMARK_MARGIN_PX = { sm: 9, md: 13, lg: 10 };
 
 type Size = 'sm' | 'md' | 'lg';
 
