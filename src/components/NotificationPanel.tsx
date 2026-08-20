@@ -89,9 +89,25 @@ export function NotificationPanel({ visible, onClose }: NotificationPanelProps) 
     markNotificationSeen(notification.id);
 
     onClose();
-    if (notification.linked_business_id) {
+
+    // 2026-08-20: account_alert gets its own bigger detail screen (small
+    // popup doesn't have room for a document link + action button). Only
+    // the id is passed — AccountAlertScreen fetches the notification
+    // fresh via fetchNotificationById rather than trusting a JSON-
+    // encoded object round-tripped through route params.
+    if (notification.notification_type === 'account_alert') {
+      router.push({ pathname: '/account-alert/[id]', params: { id: notification.id } });
+    } else if (notification.linked_offer_id) {
+      // Previously dead data — AppNotification always carried this field
+      // but nothing ever read it, so an offer-type notification fell
+      // through to the business-page branch below (or nowhere, if
+      // linked_business_id was also unset).
+      router.push(`/offer/${notification.linked_offer_id}`);
+    } else if (notification.linked_business_id) {
       router.push(`/business/${notification.linked_business_id}`);
     }
+    // else (e.g. announcement): no destination, matches today's existing
+    // behaviour for anything with no link — just dismisses.
   };
 
   return (

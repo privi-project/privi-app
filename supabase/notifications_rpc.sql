@@ -42,6 +42,13 @@ $$;
 --    coordinates passed in from the app at call time. Passing null simply
 --    skips 'area' notifications for that fetch — no location history is
 --    ever persisted for this path, by design.
+-- 2026-08-20: adding requires_acknowledgement/document_url/action_label/
+-- action_destination to the RETURNS TABLE below changes the function's
+-- return type, which Postgres refuses under CREATE OR REPLACE ("cannot
+-- change return type of existing function") — the old version has to be
+-- dropped first.
+drop function if exists public.get_my_notifications(double precision, double precision);
+
 create or replace function public.get_my_notifications(
   live_lat double precision default null,
   live_lng double precision default null
@@ -53,7 +60,11 @@ returns table (
   notification_type text,
   linked_business_id uuid,
   linked_offer_id uuid,
-  sent_at timestamptz
+  sent_at timestamptz,
+  requires_acknowledgement boolean,
+  document_url text,
+  action_label text,
+  action_destination text
 )
 language plpgsql
 security definer
@@ -65,19 +76,24 @@ declare
   v_complimentary boolean;
   v_pref_lat double precision;
   v_pref_lng double precision;
+  v_notify_new_businesses boolean;
+  v_notify_special_offers boolean;
 begin
   if v_member_id is null then
     return; -- no session, no rows
   end if;
 
-  select subscription_plan, is_complimentary, preferred_area_lat, preferred_area_lng
-    into v_plan, v_complimentary, v_pref_lat, v_pref_lng
+  select subscription_plan, is_complimentary, preferred_area_lat, preferred_area_lng,
+         notify_new_businesses, notify_special_offers
+    into v_plan, v_complimentary, v_pref_lat, v_pref_lng,
+         v_notify_new_businesses, v_notify_special_offers
   from public.profiles
   where profiles.id = v_member_id;
 
   return query
   select n.id, n.title, n.body, n.notification_type,
-         n.linked_business_id, n.linked_offer_id, n.sent_at
+         n.linked_business_id, n.linked_offer_id, n.sent_at,
+         n.requires_acknowledgement, n.document_url, n.action_label, n.action_destination
   from public.notifications n
   where n.status = 'sent'
     and (n.expires_at is null or n.expires_at >= now())
@@ -106,6 +122,18 @@ begin
                 ) <= coalesce(n.audience_radius_miles, 20)
         )
       )
+    )
+    -- 2026-08-20: per-category preference enforcement, previously
+    -- deliberately deferred (see notification_preferences.sql's own
+    -- comment). account_alert/announcement/legacy general are never
+    -- filtered — they're the "always delivered" categories by design
+    -- (Account Alerts' locked toggle, Announcement's stated intent).
+    and (
+      n.notification_type in ('account_alert', 'announcement', 'general')
+      or (n.notification_type in ('new_business', 'new_location')
+          and coalesce(v_notify_new_businesses, true))
+      or (n.notification_type in ('new_offer', 'offer_ending_soon')
+          and coalesce(v_notify_special_offers, true))
     )
   order by n.sent_at desc;
 end;

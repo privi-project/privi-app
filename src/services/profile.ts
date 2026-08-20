@@ -30,23 +30,31 @@ export async function updateProfile(userId: string, update: ProfileUpdate) {
   if (error) throw error;
 }
 
+// 2026-08-20: notify_membership_updates dropped from here — "Membership
+// Updates" folded into Account Alerts (one less toggle, and membership
+// news is exactly the kind of thing that should always reach the member
+// rather than being switchable off). The column itself stays in the
+// profiles table, just unused — not worth a destructive migration for.
 export interface NotificationPreferences {
   notify_new_businesses: boolean;
   notify_special_offers: boolean;
-  notify_membership_updates: boolean;
   notify_account_alerts: boolean;
 }
 
-// These toggles persist correctly but aren't enforced on the delivery side
-// yet — see notification_preferences.sql for why. Fetch defaults to all-on
-// if the migration hasn't been run yet (columns missing), rather than
-// erroring the whole Settings page.
+// notify_new_businesses/notify_special_offers are now enforced on the
+// delivery side (get_my_notifications in notifications_rpc.sql, App
+// repo) — notify_account_alerts still isn't and never will be, since
+// Account Alerts must always be delivered regardless of this stored
+// value (SupportSettingsScreen.tsx renders it as a locked "Always on"
+// row, not a real Switch). Fetch defaults to all-on if the migration
+// hasn't been run yet (columns missing), rather than erroring the whole
+// Settings page.
 export async function fetchNotificationPreferences(
   userId: string
 ): Promise<NotificationPreferences> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('notify_new_businesses, notify_special_offers, notify_membership_updates, notify_account_alerts')
+    .select('notify_new_businesses, notify_special_offers, notify_account_alerts')
     .eq('id', userId)
     .single();
 
@@ -54,7 +62,6 @@ export async function fetchNotificationPreferences(
     return {
       notify_new_businesses: true,
       notify_special_offers: true,
-      notify_membership_updates: true,
       notify_account_alerts: true,
     };
   }

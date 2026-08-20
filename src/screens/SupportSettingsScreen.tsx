@@ -11,7 +11,6 @@ import {
   SunIcon,
   StorefrontIcon,
   TagIcon,
-  CalendarIcon,
   BellIcon,
 } from '@/components/NavIcons';
 import {
@@ -41,7 +40,6 @@ export default function SupportSettingsScreen() {
   const [prefs, setPrefs] = useState<NotificationPreferences>({
     notify_new_businesses: true,
     notify_special_offers: true,
-    notify_membership_updates: true,
     notify_account_alerts: true,
   });
 
@@ -154,18 +152,9 @@ export default function SupportSettingsScreen() {
               subColor={subColor}
             />
             <ToggleRow
-              icon={<CalendarIcon color={COLORS.gold} size={20} />}
-              label="Membership Updates"
-              subtitle="Important updates about your membership"
-              value={prefs.notify_membership_updates}
-              onChange={(v) => handlePrefToggle('notify_membership_updates', v)}
-              textColor={textColor}
-              subColor={subColor}
-            />
-            <ToggleRow
               icon={<BellIcon color={COLORS.gold} size={20} />}
               label="Account Alerts"
-              subtitle="Legal, price and security updates — always sent, so you're never caught out"
+              subtitle="Legal, price, security updates and membership news — always sent, so you're never caught out"
               value
               locked
               onChange={() => {}}
