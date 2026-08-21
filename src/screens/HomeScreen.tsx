@@ -412,7 +412,7 @@ export default function HomeScreen() {
             </View>
           </GoldGradientBorder>
           <Text style={[styles.categoryLabel, { color: textColor }]} numberOfLines={2}>
-            Online offers
+            Redeem Codes Online
           </Text>
         </Pressable>
 
