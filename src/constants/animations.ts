@@ -8,8 +8,9 @@ export const PRIVI_EASE = 'cubic-bezier(0.45, 0, 0.2, 1)';
 // below the icon (not sideways — see SplashAnimation.tsx's comments on
 // why), then for 'welcome' the assembled pair moves up with motto reveal
 // and background transitions overlapping into buttons fade-in; for
-// 'home' it skips straight to its own single combined final stage
-// instead (stage4Home* below).
+// 'home' it skips the motto and instead shrinks+aligns onto Home's real
+// header wordmark, then the icon alone continues off-screen as the
+// overlay fades (stage4Home*/stage4HomeContinue* below).
 //
 // Each stage's start is pulled STAGE_OVERLAP earlier than the previous
 // stage's nominal end, so motion reads as one continuous, fluid gesture
@@ -78,23 +79,36 @@ export const SPLASH_ANIMATION = {
 
   totalDuration: stage4Start + 1500,
 
-  // 'home' destination only (already-signed-in path) — 2026-08-20
-  // redesign, simplified further 2026-08-21. Home never shows the motto
-  // (explicit founder call, 2026-08-21) — it skips straight from stage
-  // 3's wordmark reveal into this one final stage, so the home path
-  // never gets any longer than it already was. As of 2026-08-21 this
-  // stage is just: the whole assembled lockup (icon+wordmark, still one
-  // rigid group — no longer split apart here) slides up so the wordmark
-  // lands on Home's real header position, while the whole group fades
-  // out at the same time to reveal Home underneath — see
-  // SplashAnimation.tsx's file-level comment for why the old diagonal-
-  // icon-travel design was dropped (Home's header no longer shows an
-  // icon for it to land on, once that was removed from Home/Account/
-  // Favourites/Map). Total time-to-Home comes in under the old ~4.1s
-  // (stage3End 2500 + 800 = 3300ms), not over it, per explicit founder
-  // direction: no added wait before a returning member gets into the app.
+  // 'home' destination only (already-signed-in path) — redesigned again
+  // 2026-08-22 (3rd redesign; supersedes the pure-translateY, no-resize
+  // version from 2026-08-21 — see SplashAnimation.tsx's file-level
+  // comment for the full history). Home never shows the motto (explicit
+  // founder call, 2026-08-21) — it skips straight from stage 3's
+  // wordmark reveal into these two final stages, so the home path never
+  // gets much longer than it already was.
+  //
+  // Stage 4Home ("shrink+align"): the whole assembled lockup (icon +
+  // wordmark, still one rigid group, uniformly scaling down together —
+  // not split apart) shrinks AND slides up at the same time, timed so
+  // both finish together: by the moment this stage ends, the wordmark is
+  // at Home's real header wordmark's exact size AND position, not just
+  // roughly near it. Founder feedback 2026-08-22: the previous "moves up
+  // but stays the same size" version felt disconnected compared to the
+  // Welcome path's own settle-into-place feel — this fixes that by
+  // giving Home a genuine, matching settle moment too, not just a slide.
   stage4HomeStart: stage3End,
   stage4HomeDuration: 800,
+  // Stage 4HomeContinue: once the wordmark has genuinely landed (same
+  // size, same position as the real one — the handoff is invisible
+  // because there's nothing left to tell them apart), only the icon
+  // keeps travelling further, off the top of the screen, while the
+  // whole overlay fades to reveal Home underneath — pulled
+  // STAGE_OVERLAP earlier than stage4Home's nominal end, same
+  // overlapping-motion convention used everywhere else, so it reads as
+  // one continuous gesture (settle, then the icon alone continues
+  // leaving) rather than a stop then a separate second move.
+  stage4HomeContinueStart: stage3End + 800 - STAGE_OVERLAP,
+  stage4HomeContinueDuration: 500,
 } as const;
 
 // Where Home's header logo sits — SplashAnimation's "destination=home"
