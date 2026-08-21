@@ -408,7 +408,9 @@ export default function HomeScreen() {
             fillHeight
           >
             <View style={styles.categoryCircleContent}>
-              <GlobeIcon size={26} color={COLORS.gold} />
+              {/* strokeWidth lightened to match the category icons beside
+                  it — see GlobeIcon's own comment in NavIcons.tsx. */}
+              <GlobeIcon size={26} color={COLORS.gold} strokeWidth={1.15} />
             </View>
           </GoldGradientBorder>
           <Text style={[styles.categoryLabel, { color: textColor }]} numberOfLines={2}>

@@ -151,15 +151,25 @@ export function PhoneIcon({ color, size = 20 }: IconProps) {
   );
 }
 
-export function GlobeIcon({ color, size = 20 }: IconProps) {
+// strokeWidth defaults to 1.8, matching every other icon in this file — but
+// is overridable per call site. Added 2026-08-22: on HomeScreen this icon
+// sits directly beside the founder's own hand-supplied category SVGs
+// (CategoryIcon.tsx), which use a 48x48 canvas at stroke-width 2.3 — at
+// their shared 26px display size that's ~1.25px of actual rendered stroke,
+// versus this icon's default 1.8 on a 24x24 canvas working out to ~1.95px
+// at the same size, ~56% heavier. Everywhere else this icon is used
+// (BusinessScreen etc.) it sits beside this file's OWN sibling icons, which
+// share its weight, so the default stays 1.8 — only HomeScreen's usage
+// overrides it lighter to match the category icons it's actually next to.
+export function GlobeIcon({ color, size = 20, strokeWidth = 1.8 }: IconProps & { strokeWidth?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={1.8} />
-      <Path d="M3 12h18" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M3 12h18" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
       <Path
         d="M12 3c2.5 2.5 3.8 5.8 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.8-3.8-9s1.3-6.5 3.8-9z"
         stroke={color}
-        strokeWidth={1.8}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
