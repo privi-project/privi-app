@@ -117,12 +117,39 @@ export default function HomeScreen() {
   // surfaces such as inputs/cards that do legitimately shift shade.
   const cardBg = COLORS.teal;
 
+  // REAL BUG FOUND 2026-08-22 (founder report: category/search results
+  // occasionally "confused" — reproduced once, then not, on a retest of
+  // the exact same steps). loadData had no guard against out-of-order
+  // responses: every change to any of its dependencies (tapping a
+  // category, clearing search, etc.) fires a brand new async loadData()
+  // call, with nothing cancelling or ignoring whichever EARLIER call is
+  // still in flight. If that earlier request happens to resolve LATER
+  // than a newer one — easy on a real network, where response timing
+  // isn't guaranteed to match request order — its stale results silently
+  // overwrite the correct, current ones. That matches both symptoms
+  // reported exactly: search "car" + tap Leisure showing "a mix of
+  // businesses" instead of correctly empty (the old car-only search's
+  // stale response arrived after the correct car+Leisure one), and
+  // clearing search after that showing the full unfiltered list while
+  // the Leisure chip stayed visually selected (an even older, no-filter
+  // response arriving last, while selectedCategoryId itself — plain
+  // synchronous state, untouched by fetch timing — correctly still said
+  // Leisure). Not a dev-app-only lag artifact — this can happen in a
+  // production build too, just less often, on any network where
+  // responses don't arrive in the same order requests were sent. Fixed
+  // with a request-generation guard: each call to loadData gets its own
+  // id, and only the response matching the CURRENT (latest) id is ever
+  // allowed to update state — anything older is silently dropped.
+  const loadRequestId = useRef(0);
+
   const loadData = useCallback(async () => {
+    const requestId = ++loadRequestId.current;
     try {
       const [cats, memberLocation] = await Promise.all([
         fetchCategories(),
         user ? getMemberLocation(user.id) : Promise.resolve(null),
       ]);
+      if (requestId !== loadRequestId.current) return; // superseded — drop
       setCategories(cats);
 
       const [biz, favIds] = await Promise.all([
@@ -136,13 +163,18 @@ export default function HomeScreen() {
         }),
         user ? fetchFavouriteIds(user.id) : Promise.resolve(new Set<string>()),
       ]);
+      if (requestId !== loadRequestId.current) return; // superseded — drop
       setBusinesses(biz);
       setFavouriteIds(favIds);
     } catch (e) {
-      console.error('Failed to load homepage data', e);
+      if (requestId === loadRequestId.current) {
+        console.error('Failed to load homepage data', e);
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === loadRequestId.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [user, effectiveCategoryIds, activeQuery, selectedDistance, accessibleOnly, onlineOfferOnly]);
 
