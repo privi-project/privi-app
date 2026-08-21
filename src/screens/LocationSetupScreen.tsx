@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS } from '@/constants/colors';
-import { BrandMark } from '@/components/BrandMark';
+import { Wordmark } from '@/components/BrandMark';
 import { GoldGradientBorder } from '@/components/GoldGradient';
 import {
   requestForegroundLocationPermission,
@@ -126,7 +126,7 @@ export default function LocationSetupScreen() {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.header}>
-        <BrandMark size="sm" on={isDark ? 'dark' : 'light'} />
+        <Wordmark size="sm" on={isDark ? 'dark' : 'light'} />
       </View>
 
       {step === 'permission' ? (

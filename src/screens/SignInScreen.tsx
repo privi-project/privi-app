@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants/colors';
-import { BrandMark } from '@/components/BrandMark';
+import { Wordmark } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { EyeIcon, EyeOffIcon } from '@/components/NavIcons';
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal';
@@ -110,7 +110,7 @@ export default function SignInScreen() {
           </Pressable>
 
           <View style={styles.header}>
-            <BrandMark size="sm" on={isDark ? 'dark' : 'light'} />
+            <Wordmark size="sm" on={isDark ? 'dark' : 'light'} />
             <GoldGradientText style={styles.motto}>More for you. Every day.</GoldGradientText>
           </View>
 

@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { GoogleMap, MarkerF, useLoadScript } from '@react-google-maps/api';
 import { COLORS } from '@/constants/colors';
 import { GoldGradientBorder } from '@/components/GoldGradient';
-import { BrandMark } from '@/components/BrandMark';
+import { Wordmark } from '@/components/BrandMark';
 import { BellIcon, MyLocationIcon } from '@/components/NavIcons';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { BusinessPreviewSheet } from '@/components/BusinessPreviewSheet';
@@ -162,8 +162,13 @@ export default function MapScreen() {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.header}>
+        {/* 2026-08-21: header icon removed (see SplashAnimation.tsx /
+            HomeScreen.tsx for why) — plain 3-way flex balance instead of
+            the absolute-overlay trick. */}
         <View style={styles.headerSpacer} />
-        <BrandMark size="sm" on={isDark ? 'dark' : 'light'} />
+        <View style={styles.headerWordmark}>
+          <Wordmark size="sm" on={isDark ? 'dark' : 'light'} />
+        </View>
         <Pressable
           style={styles.bellButton}
           onPress={() => setNotificationsVisible(true)}
@@ -257,6 +262,10 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 24,
+  },
+  headerWordmark: {
+    flex: 1,
+    alignItems: 'center',
   },
   bellButton: {
     width: 24,

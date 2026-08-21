@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { COLORS } from '@/constants/colors';
-import { BrandMark } from '@/components/BrandMark';
+import { Wordmark } from '@/components/BrandMark';
 import { GoldGradientBorder } from '@/components/GoldGradient';
 import { supabase } from '@/services/supabase';
 import { noOutline } from '@/utils/webStyles';
@@ -88,7 +88,7 @@ export default function ResetPasswordScreen() {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.header}>
-        <BrandMark size="sm" on={isDark ? 'dark' : 'light'} />
+        <Wordmark size="sm" on={isDark ? 'dark' : 'light'} />
       </View>
 
       {exchanging ? (

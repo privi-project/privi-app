@@ -19,7 +19,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { COLORS } from '@/constants/colors';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { HOME_HEADER_TOP_PADDING } from '@/constants/animations';
-import { BrandMark } from '@/components/BrandMark';
+import { Wordmark } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { BellIcon, SearchIcon, HeartIcon, GlobeIcon } from '@/components/NavIcons';
 import { CategoryIcon } from '@/components/CategoryIcon';
@@ -312,9 +312,16 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.header}>
+        {/* 2026-08-21: header icon removed (founder decision, once the
+            splash animation stopped needing a top-left icon to land on —
+            see SplashAnimation.tsx). Back to a plain 3-way flex balance:
+            an invisible spacer matching the bell's own width on the left,
+            wordmark centred (flex:1) in the middle, bell on the right —
+            no absolute-positioning trick needed now that both sides are
+            simple and equal-width again. */}
         <View style={styles.headerSpacer} />
-        <Pressable onPress={resetToDefaultHome} hitSlop={8}>
-          <BrandMark size="sm" on={isDark ? 'dark' : 'light'} />
+        <Pressable onPress={resetToDefaultHome} hitSlop={8} style={styles.headerWordmark}>
+          <Wordmark size="sm" on={isDark ? 'dark' : 'light'} />
         </Pressable>
         <Pressable
           style={styles.bellButton}
@@ -584,6 +591,10 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 24,
+  },
+  headerWordmark: {
+    flex: 1,
+    alignItems: 'center',
   },
   bellButton: {
     width: 24,

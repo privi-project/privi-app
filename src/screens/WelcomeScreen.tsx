@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Pressable, Linking, Animated } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants/colors';
-import { SplashAnimation } from '@/components/SplashAnimation';
-import { BrandMark } from '@/components/BrandMark';
+import { SplashAnimation, FINAL_SIZES } from '@/components/SplashAnimation';
+import { Wordmark, BrandIcon } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 
@@ -50,8 +50,14 @@ export default function WelcomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
+      {/* Vertical icon/wordmark/motto stack — deliberately matches the
+          exact shape SplashAnimation's assembly animation ends on for the
+          welcome destination, so there's no visible "jump" at handoff.
+          Gap values are shared with the splash via FINAL_SIZES rather
+          than duplicated, so the two can't silently drift apart. */}
       <View style={styles.lockup}>
-        <BrandMark size="md" on={theme === 'dark' ? 'dark' : 'light'} />
+        <BrandIcon size="md" style={{ marginBottom: FINAL_SIZES.welcome.gap }} />
+        <Wordmark size="md" on={theme === 'dark' ? 'dark' : 'light'} />
         <GoldGradientText style={styles.motto}>More for you.{'\n'}Every day.</GoldGradientText>
       </View>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { Image } from 'react-native';
 
 // Intrinsic aspect ratios of the source PNG exports (same assets as website,
 // see website/src/components/brand-mark.tsx — this is a direct port).
@@ -11,31 +11,19 @@ const WORDMARK_LIGHT_RATIO = 951 / 489;
 
 // Icon and wordmark are sized independently on purpose (see website memory:
 // resizing the wordmark must not silently resize the icon).
-const LOGO_HEIGHT_PX = { sm: 49, md: 74, lg: 126 };
+// md was 74 until 2026-08-20 — read a few px too big on WelcomeScreen
+// (the only place "md" is used). Must stay in sync with
+// SplashAnimation.tsx's FINAL_SIZES.welcome.iconHeight — that's what the
+// splash animates to, this is what WelcomeScreen's own static layout
+// renders once the animation hands off, and the whole point of that
+// handoff is landing on the exact same size.
+const LOGO_HEIGHT_PX = { sm: 49, md: 70, lg: 126 };
 
 // Wordmark rendered height is stretched relative to its width-derived base
 // height — the source file reads slightly squashed/wide at its natural
 // ratio, so height is deliberately stretched independently of width.
 const WORDMARK_HEIGHT_STRETCH = 62 / 56;
 const WORDMARK_BASE_HEIGHT_PX = { sm: 37, md: 56, lg: 80 };
-
-// Gap between icon and wordmark. The website's own screenshot-calibrated
-// negative margins do NOT transfer to React Native's Image renderer —
-// tested directly (4-5x zoom screenshots) with the OLD logo asset and the
-// ported values caused the icon's tail to visibly overlap the wordmark's
-// "p" at both sm and md, so this has always been calibrated separately
-// from the website.
-//
-// 2026-08-20 ("Refined Privi Logo" swap): sm:4/md:6 read as too tight per
-// user feedback looking at real Welcome/sign-in renders. Retuned to match
-// the website's own gap:iconHeight ratio (~0.18, consistent across its
-// md/lg) rather than guessing a new absolute value — sm: 49*0.18≈9,
-// md: 74*0.18≈13. The new master logo (915x1241, trimmed to real content
-// bounds) crops far more predictably under resizeMode="contain" than the
-// old asset did, so this ratio-based approach is safe now even though the
-// original cross-renderer warning above (don't port website px values
-// verbatim) still holds for any future logo replacement.
-const WORDMARK_MARGIN_PX = { sm: 9, md: 13, lg: 10 };
 
 type Size = 'sm' | 'md' | 'lg';
 
@@ -47,45 +35,16 @@ interface BrandMarkProps {
 }
 
 /**
- * Full brand lockup: gold icon immediately left of the "privi" wordmark.
- * Mirrors website's BrandMark component exactly — same assets, same ratios.
+ * Wordmark image alone, no icon — used on legal-style / settings pages,
+ * and (2026-08-20) most app headers. The combo "icon immediately left of
+ * wordmark" component that used to live here (`BrandMark`) is gone —
+ * the founder grew to dislike the icon sitting right next to the
+ * wordmark, chased through several rounds of margin/size tuning, and the
+ * decision was to stop juxtaposing them at all rather than keep tuning
+ * it. Icon and wordmark are now always placed independently (see
+ * HomeScreen.tsx etc. for the icon-left/wordmark-centre header pattern,
+ * and WelcomeScreen.tsx / SplashAnimation.tsx for the vertical stack).
  */
-export function BrandMark({ size = 'md', on = 'light', style }: BrandMarkProps) {
-  const logoHeight = LOGO_HEIGHT_PX[size];
-  const wordmarkBaseHeight = WORDMARK_BASE_HEIGHT_PX[size];
-  const wordmarkMarginLeft = WORDMARK_MARGIN_PX[size];
-  const wordmarkDisplayHeight = Math.round(wordmarkBaseHeight * WORDMARK_HEIGHT_STRETCH);
-
-  const wordmarkSrc =
-    on === 'dark'
-      ? require('../../assets/brand/privi-wordmark-light.png')
-      : require('../../assets/brand/privi-wordmark-dark.png');
-  const wordmarkRatio = on === 'dark' ? WORDMARK_LIGHT_RATIO : WORDMARK_DARK_RATIO;
-
-  const logoWidth = Math.round(logoHeight * LOGO_RATIO);
-  const wordmarkWidth = Math.round(wordmarkBaseHeight * wordmarkRatio);
-
-  return (
-    <View style={[styles.container, style]}>
-      <Image
-        source={require('../../assets/brand/privi-logo.png')}
-        style={{ width: logoWidth, height: logoHeight }}
-        resizeMode="contain"
-      />
-      <Image
-        source={wordmarkSrc}
-        style={{
-          width: wordmarkWidth,
-          height: wordmarkDisplayHeight,
-          marginLeft: wordmarkMarginLeft,
-        }}
-        resizeMode="contain"
-      />
-    </View>
-  );
-}
-
-/** Wordmark image alone, no icon — used on legal-style / settings pages. */
 export function Wordmark({ size = 'md', on = 'light', style }: BrandMarkProps) {
   const wordmarkBaseHeight = WORDMARK_BASE_HEIGHT_PX[size];
   const wordmarkDisplayHeight = Math.round(wordmarkBaseHeight * WORDMARK_HEIGHT_STRETCH);
@@ -118,11 +77,3 @@ export function BrandIcon({ size = 'md', style }: { size?: Size; style?: any }) 
     />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
