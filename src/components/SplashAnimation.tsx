@@ -345,18 +345,20 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
 
   // Shared between both destinations — just the two crossfading images,
   // absoluteFill relative to their explicitly-sized parent
-  // (wordmarkContentAnimatedStyle's box).
+  // (wordmarkContentAnimatedStyle's box). wordmarkImageFill (explicit
+  // 100%/100%) alongside absoluteFill — see its own comment in `styles`
+  // for why absoluteFill alone isn't enough on web.
   const wordmarkImages = (
     <>
       <Animated.Image
         source={startWordmarkSrc}
         resizeMode="contain"
-        style={[StyleSheet.absoluteFill, startWordmarkAnimatedStyle]}
+        style={[StyleSheet.absoluteFill, styles.wordmarkImageFill, startWordmarkAnimatedStyle]}
       />
       <Animated.Image
         source={endWordmarkSrc}
         resizeMode="contain"
-        style={[StyleSheet.absoluteFill, endWordmarkAnimatedStyle]}
+        style={[StyleSheet.absoluteFill, styles.wordmarkImageFill, endWordmarkAnimatedStyle]}
       />
     </>
   );
@@ -433,6 +435,28 @@ const styles = StyleSheet.create({
   // absolutely positioned.
   wordmarkWrap: {
     overflow: 'hidden',
+  },
+  // REAL BUG FOUND 2026-08-22 (web only, confirmed on the web preview —
+  // the wordmark reveal on native/Android was never affected): the two
+  // crossfading wordmark Animated.Images were only ever given
+  // `StyleSheet.absoluteFill` (position + inset:0, no explicit width/
+  // height) to size themselves against their parent box. On native,
+  // inset:0 alone is enough to stretch any view to fill its parent
+  // regardless of element type. On React Native Web, an <Image> with no
+  // explicit width/height falls back to the SOURCE ASSET's own natural
+  // pixel size (951x489 for this wordmark) instead of stretching to
+  // fill — confirmed directly via computed styles: the image's actual
+  // host div was rendering at 951x489 inside a 109x62 parent, with only
+  // the extreme top-left corner (mostly transparent padding in the
+  // source PNG) visible through the tiny overflow:hidden clip window.
+  // That's why the wordmark reveal was invisible on the web preview
+  // while the icon (which already gets explicit pixel width/height via
+  // iconImageAnimatedStyle) rendered/scaled correctly. Fix: give the
+  // wordmark images an explicit 100%/100% fill alongside absoluteFill,
+  // so they can no longer fall back to natural size on any platform.
+  wordmarkImageFill: {
+    width: '100%',
+    height: '100%',
   },
   // 'welcome' only.
   mottoWrap: {
