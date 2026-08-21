@@ -82,11 +82,24 @@ export function NotificationPanel({ visible, onClose }: NotificationPanelProps) 
   const placeholderColor = isDark ? '#9CA3AF' : COLORS.mediumGray;
 
   const handlePress = (notification: AppNotification) => {
-    // Optimistic removal from THIS panel's own list — no need to wait on
-    // the AsyncStorage write. Other screens' bell dots pick up the change
+    // account_alert notifications that require acknowledgement are NOT
+    // marked seen here — merely opening one isn't accepting it. Real bug
+    // found 2026-08-22: marking it seen the instant it was tapped let a
+    // member back out of a required T&Cs/price-change notice without
+    // ever actually accepting it, and the notification would then never
+    // come back (fetchMyNotifications filters out anything locally
+    // marked seen). AccountAlertScreen now marks it seen itself, only
+    // once acknowledgeNotification() has actually succeeded server-side
+    // — see its handleAccept. Optimistic removal from THIS panel's own
+    // list stays immediate for everything else — no need to wait on the
+    // AsyncStorage write; other screens' bell dots pick up the change
     // next time they call fetchMyNotifications() themselves.
-    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-    markNotificationSeen(notification.id);
+    const requiresAcknowledgement =
+      notification.notification_type === 'account_alert' && notification.requires_acknowledgement;
+    if (!requiresAcknowledgement) {
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+      markNotificationSeen(notification.id);
+    }
 
     onClose();
 

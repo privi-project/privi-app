@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, BackHandler } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { COLORS } from '@/constants/colors';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { GoldGradientText } from '@/components/GoldGradient';
 import { ChevronLeftIcon, BellIcon } from '@/components/NavIcons';
 import { AppNotification, fetchNotificationById } from '@/services/notifications';
 import { acknowledgeNotification } from '@/services/notificationAcknowledgements';
+import { markNotificationSeen } from '@/services/notificationReads';
 
 // No dedicated "danger" token in COLORS — matches the one other spot that
 // needs one (PersonalInformationScreen.tsx's errorText).
@@ -46,6 +47,26 @@ export default function AccountAlertScreen() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Compulsory-accept (2026-08-22, real bug found): a required
+  // acknowledgement (T&Cs/price change, etc.) previously could be
+  // dismissed via the back chevron, the swipe-back gesture, or Android's
+  // hardware back button — none of them called acknowledgeNotification,
+  // so the server-side "who accepted what, when" record never got
+  // written, yet the notification still vanished (see NotificationPanel
+  // .tsx's handlePress for the other half of this fix — it no longer
+  // marks the notification seen just from being opened). While
+  // blocksExit is true there is deliberately no way out of this screen
+  // except tapping Accept — no "Deny" path either, since that needs a
+  // real answer to "what happens to their account then," which is a
+  // product/legal decision, not one to invent here.
+  const blocksExit = !!notification?.requires_acknowledgement && !acknowledged;
+
+  useEffect(() => {
+    if (!blocksExit) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [blocksExit]);
+
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
   const textColor = isDark ? COLORS.ivory : COLORS.charcoal;
   const subColor = isDark ? '#9CA3AF' : COLORS.mediumGray;
@@ -56,6 +77,9 @@ export default function AccountAlertScreen() {
     setAcknowledging(true);
     try {
       await acknowledgeNotification(notification.id);
+      // Only marked seen now that acceptance is actually recorded server-
+      // side — see the blocksExit comment above and NotificationPanel.tsx.
+      markNotificationSeen(notification.id);
       setAcknowledged(true);
       setTimeout(() => router.back(), 600);
     } catch {
@@ -96,10 +120,18 @@ export default function AccountAlertScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
+      {/* Blocks the swipe-back gesture while blocksExit is true — the
+          hardware back button is handled separately above (BackHandler),
+          and the chevron below is simply not rendered. */}
+      <Stack.Screen options={{ gestureEnabled: !blocksExit }} />
       <View style={styles.header}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
-          <ChevronLeftIcon color={COLORS.gold} />
-        </Pressable>
+        {blocksExit ? (
+          <View style={styles.headerSpacer} />
+        ) : (
+          <Pressable hitSlop={12} onPress={() => router.back()}>
+            <ChevronLeftIcon color={COLORS.gold} />
+          </Pressable>
+        )}
         <Text style={[styles.headerTitle, { color: textColor }]}>Account Alert</Text>
         <View style={styles.headerSpacer} />
       </View>
