@@ -382,7 +382,7 @@ export default function HomeScreen() {
               <SearchIcon color={placeholderColor} />
               <TextInput
                 style={[styles.searchInput, { color: textColor }]}
-                placeholder="Search businesses, towns, categories or tags"
+                placeholder="Search businesses, towns, categories or keywords"
                 placeholderTextColor={placeholderColor}
                 value={queryInput}
                 onChangeText={setQueryInput}
