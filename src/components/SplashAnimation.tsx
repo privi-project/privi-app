@@ -296,6 +296,26 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
         SPLASH_ANIMATION.stage4HomeStart,
         withTiming(homeLockupTargetY, { duration: SPLASH_ANIMATION.stage4HomeDuration, easing: EASING })
       );
+      // REAL BUG FOUND 2026-08-23: Home never crossfaded its wordmark
+      // colour at all (this value just sat at its initial 0 the whole
+      // time), so it always showed the light/ivory-coloured "start"
+      // image — correct for dark theme (Home's real header also uses
+      // the light-coloured wordmark there, so it matched anyway and the
+      // bug was invisible), but WRONG for light theme, where Home's real
+      // header wordmark is dark-coloured against the ivory background —
+      // for the brief moment the two align (right as shrink+align
+      // finishes), the always-ivory animated one visibly sat on top of
+      // the real dark one underneath. Welcome already got this right
+      // (its own wordmarkCrossfade below resolves to the same source
+      // image for either colour, so crossfading is a genuine no-op on
+      // dark theme and a real colour change on light theme) — Home just
+      // needs the same crossfade, timed to land by the same moment the
+      // size and position do, so colour, size and position all converge
+      // together.
+      wordmarkCrossfade.value = withDelay(
+        SPLASH_ANIMATION.stage4HomeStart,
+        withTiming(1, { duration: SPLASH_ANIMATION.stage4HomeDuration, easing: EASING })
+      );
 
       // Stage 4HomeContinue: the wordmark has now genuinely landed (same
       // size, same position as the real one) and stops here — only the
@@ -373,10 +393,11 @@ export function SplashAnimation({ onComplete, theme = 'dark', destination = 'wel
 
   // Pure crossfade opacity (light/dark wordmark swap) — the reveal itself
   // is handled entirely by the clip window's height above, not by opacity.
-  // Never actually animated for 'home' (stays at its initial 0), matching
-  // the pre-existing behaviour that Home's wordmark doesn't crossfade —
-  // it's pixel-identical to Home's real one by the time it fades, so
-  // whichever colour it happens to be doesn't matter.
+  // Animated for BOTH destinations now (2026-08-23 fix, see the
+  // wordmarkCrossfade assignment above) — Home's own crossfade lands by
+  // the same moment the shrink+align stage finishes, so it's showing the
+  // correct theme-matched colour by the time it visually aligns with
+  // Home's real header wordmark, not just the correct size/position.
   const startWordmarkAnimatedStyle = useAnimatedStyle(() => ({
     opacity: interpolate(wordmarkCrossfade.value, [0, 1], [1, 0], Extrapolation.CLAMP),
   }));

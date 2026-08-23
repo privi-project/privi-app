@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,13 @@ export default function SignInScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false);
+  // REAL GAP FOUND 2026-08-23: neither field had onSubmitEditing wired up
+  // at all, so pressing Enter/Go on a real keyboard did nothing — the
+  // member had to reach for the Sign In button by hand every time. Email's
+  // Enter now moves focus to Password (returnKeyType="next" reflects
+  // that); Password's Enter submits directly, matching what Go/Enter
+  // means everywhere else.
+  const passwordInputRef = useRef<TextInput>(null);
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
   const textColor = isDark ? COLORS.ivory : COLORS.charcoal;
@@ -130,6 +137,9 @@ export default function SignInScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               editable={!loading}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
+              blurOnSubmit={false}
             />
           </GoldGradientBorder>
 
@@ -143,6 +153,7 @@ export default function SignInScreen() {
               fillHeight
             >
               <TextInput
+                ref={passwordInputRef}
                 style={[styles.input, styles.passwordInput, { color: textColor }, noOutline]}
                 placeholder="Enter your password"
                 placeholderTextColor={placeholderColor}
@@ -150,6 +161,8 @@ export default function SignInScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 editable={!loading}
+                returnKeyType="go"
+                onSubmitEditing={handleSignIn}
               />
             </GoldGradientBorder>
             <Pressable
