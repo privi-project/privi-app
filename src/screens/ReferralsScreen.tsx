@@ -43,6 +43,11 @@ export default function ReferralsScreen() {
     load();
   }, [load]);
 
+  // Months earned, not a £ figure — stays correct even if pricing ever
+  // changes, and "3 free months earned" is just as motivating as a price
+  // without needing the app to know what the current monthly rate is.
+  const rewardedCount = referred.filter((m) => m.status === 'rewarded').length;
+
   const handleShare = () => {
     if (!referralCode) return;
     Share.share({
@@ -70,11 +75,28 @@ export default function ReferralsScreen() {
               Give a friend their second month free
             </Text>
             <Text style={[styles.explainerBody, { color: subColor }]}>
-              Share your code below. When a friend joins Privi using it, their second month is on
-              us — and once their first payment goes through, you get a free month too. There&apos;s
-              no limit — refer as many friends as you like.
+              Share your code with a friend, and their second month is free once they join. Once
+              their first payment clears, you get a free month too — with no limit on how many
+              friends you can refer.
             </Text>
           </View>
+
+          {referred.length > 0 && (
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{referred.length}</Text>
+                <Text style={[styles.statLabel, { color: subColor }]}>
+                  {referred.length === 1 ? 'Friend referred' : 'Friends referred'}
+                </Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{rewardedCount}</Text>
+                <Text style={[styles.statLabel, { color: subColor }]}>
+                  {rewardedCount === 1 ? 'Free month earned' : 'Free months earned'}
+                </Text>
+              </View>
+            </View>
+          )}
 
           <Text style={styles.sectionHeading}>YOUR CODE</Text>
           {referralCode ? (
@@ -165,6 +187,30 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 19,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.gold,
+    borderRadius: 14,
+    paddingVertical: 16,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.gold,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
   },
   sectionHeading: {
     fontSize: 12,
