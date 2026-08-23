@@ -120,12 +120,38 @@ export async function fetchBusinesses({
   // Filtered in JS below, after that matching happens.
 
   if (searchQuery && searchQuery.trim()) {
-    // Matches Admin_Portal_Structure.docx Section 12's search scope:
-    // business name AND the admin-authored search_keywords tags (e.g. a
-    // business named "Fairway Park" tagged "golf" is found by searching
-    // "golf") — literal substring matching, no fuzzy matching per spec.
+    // REAL GAP FOUND 2026-08-23: the search bar's own placeholder promised
+    // "businesses, towns or categories" but the query only ever matched
+    // business name + the admin-authored search_keywords tags — town and
+    // category were never actually wired up. Fixed by widening this to a
+    // real 4-way match: name, tag words (search_keywords — both already
+    // covered by the single .or() below, straight PostgREST columns on
+    // businesses itself), town (business_locations.city — ANY of a
+    // business's active locations, not just its nearest one, so a chain
+    // with one branch in the searched town still shows up), and category
+    // (the category's own label via business_categories, so typing e.g.
+    // "food" finds anything tagged Food & Drink even if neither the name
+    // nor its own keywords mention food). Town and category live on
+    // joined tables PostgREST can't OR across in a single query the way
+    // name/search_keywords can, so those two run as their own small
+    // lookups in parallel and get unioned in with the name/keyword match
+    // before the main query filters on the combined id set.
     const term = searchQuery.trim().replace(/[%,]/g, '');
-    query = query.or(`name.ilike.%${term}%,search_keywords.ilike.%${term}%`);
+    const [nameOrKeywordMatch, townMatch, categoryMatch] = await Promise.all([
+      supabase.from('businesses').select('id').eq('status', 'active').or(`name.ilike.%${term}%,search_keywords.ilike.%${term}%`),
+      supabase.from('business_locations').select('business_id').eq('status', 'active').ilike('city', `%${term}%`),
+      supabase.from('business_categories').select('business_id, categories!inner(label)').ilike('categories.label', `%${term}%`),
+    ]);
+    if (nameOrKeywordMatch.error) throw nameOrKeywordMatch.error;
+    if (townMatch.error) throw townMatch.error;
+    if (categoryMatch.error) throw categoryMatch.error;
+
+    const matchedIds = new Set<string>([
+      ...nameOrKeywordMatch.data.map((r) => r.id as string),
+      ...townMatch.data.map((r: any) => r.business_id as string),
+      ...categoryMatch.data.map((r: any) => r.business_id as string),
+    ]);
+    query = query.in('id', Array.from(matchedIds));
   }
 
   // Unlike accessibleOnly, this genuinely needs a second table — offers
