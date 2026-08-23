@@ -100,13 +100,21 @@ export async function fetchBusinesses({
 }: FetchBusinessesOptions): Promise<BusinessCard[]> {
   const hasCategoryFilter = !!categoryIds && categoryIds.length > 0;
 
+  // business_locations!business_locations_business_id_fkey (not bare
+  // "business_locations(...)") — REAL BUG FOUND AND FIXED 2026-08-23: the
+  // featured_locations table added this session gives PostgREST a SECOND
+  // path from businesses to business_locations (via featured_locations),
+  // on top of the existing direct one. Left unqualified, PostgREST can no
+  // longer guess which relationship "business_locations(...)" means and
+  // refuses the whole query (PGRST201) — this is what took every business
+  // off the Home feed AND emptied the Admin Portal's business list.
   let query = supabase
     .from('businesses')
     .select(
       `id, name, short_description, logo_url, featured_level, featured_at, featured_expires_at,
        featured_location_scope,
        business_categories!inner(category_id),
-       business_locations(id, latitude, longitude, status, is_accessible),
+       business_locations!business_locations_business_id_fkey(id, latitude, longitude, status, is_accessible),
        featured_locations(location_id)`
     )
     .eq('status', 'active');
@@ -382,7 +390,7 @@ export async function fetchBusinessDetail(
     .from('businesses')
     .select(
       `id, name, short_description, about_description, logo_url,
-       business_locations(id, address_line1, address_line2, city, region, postcode, formatted_address, phone, website_url, opening_hours, latitude, longitude, status, is_accessible)`
+       business_locations!business_locations_business_id_fkey(id, address_line1, address_line2, city, region, postcode, formatted_address, phone, website_url, opening_hours, latitude, longitude, status, is_accessible)`
     )
     .eq('id', id)
     .eq('status', 'active')
@@ -471,7 +479,7 @@ export interface BusinessPin {
 export async function fetchBusinessPins(): Promise<BusinessPin[]> {
   const { data, error } = await supabase
     .from('businesses')
-    .select('id, name, short_description, logo_url, business_locations(id, latitude, longitude, status)')
+    .select('id, name, short_description, logo_url, business_locations!business_locations_business_id_fkey(id, latitude, longitude, status)')
     .eq('status', 'active');
 
   if (error) throw error;
