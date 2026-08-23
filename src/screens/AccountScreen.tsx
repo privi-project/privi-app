@@ -5,7 +5,7 @@ import { COLORS } from '@/constants/colors';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { Wordmark } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
-import { BellIcon, AccountIcon, SettingsIcon, ChevronRightIcon } from '@/components/NavIcons';
+import { BellIcon, AccountIcon, SettingsIcon, ChevronRightIcon, GiftIcon } from '@/components/NavIcons';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { SignOutModal } from '@/components/SignOutModal';
 import { useNotificationDot } from '@/hooks/useNotificationDot';
@@ -49,6 +49,19 @@ export default function AccountScreen() {
               <View style={styles.cardText}>
                 <Text style={styles.cardTitle}>Personal Information</Text>
                 <Text style={styles.cardSubtitle}>Manage your account details</Text>
+              </View>
+              <ChevronRightIcon color={COLORS.gold} size={20} />
+            </View>
+          </GoldGradientBorder>
+        </Pressable>
+
+        <Pressable onPress={() => router.push('/referrals')}>
+          <GoldGradientBorder borderWidth={1.5} borderRadius={14} backgroundColor={COLORS.teal} style={styles.cardBorder}>
+            <View style={styles.card}>
+              <GiftIcon color={COLORS.gold} size={26} />
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>Referrals</Text>
+                <Text style={styles.cardSubtitle}>Give a friend their second month free</Text>
               </View>
               <ChevronRightIcon color={COLORS.gold} size={20} />
             </View>
