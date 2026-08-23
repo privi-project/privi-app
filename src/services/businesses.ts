@@ -104,8 +104,10 @@ export async function fetchBusinesses({
     .from('businesses')
     .select(
       `id, name, short_description, logo_url, featured_level, featured_at, featured_expires_at,
+       featured_location_scope,
        business_categories!inner(category_id),
-       business_locations(latitude, longitude, status, is_accessible)`
+       business_locations(id, latitude, longitude, status, is_accessible),
+       featured_locations(location_id)`
     )
     .eq('status', 'active');
 
@@ -220,16 +222,32 @@ export async function fetchBusinesses({
       b.featured_level !== 'none' &&
       (!b.featured_expires_at || new Date(b.featured_expires_at) > new Date());
 
+    // Per-location Featured pricing (2026-08-23): a founder who charges per
+    // site can restrict a paid term to specific locations (Admin Portal's
+    // "Locations covered" picker on the business edit page). When that's
+    // the case, the boost should only apply to a member actually matched
+    // to one of those specific locations — not the business's other,
+    // unpaid-for branches. featured_location_scope === 'all' (the default,
+    // unchanged prior behaviour) always qualifies.
+    const featuredLocationIds = new Set(
+      (b.featured_locations ?? []).map((r: any) => r.location_id as string)
+    );
+    const locationQualifiesForFeatured =
+      b.featured_location_scope !== 'selected' ||
+      (matchedLocation != null && featuredLocationIds.has(matchedLocation.id));
+
     // 'category'-tier featured only counts as featured within a
     // category-filtered view — the inner-join-with-.in() filter above
     // already guarantees every returned row belongs to one of the
     // requested categories, so no extra membership check is needed here.
     const featuredLevel: FeaturedLevel =
-      featuredIsLive && b.featured_level === 'global'
-        ? 'global'
-        : featuredIsLive && b.featured_level === 'category' && hasCategoryFilter
-          ? 'category'
-          : 'none';
+      !locationQualifiesForFeatured
+        ? 'none'
+        : featuredIsLive && b.featured_level === 'global'
+          ? 'global'
+          : featuredIsLive && b.featured_level === 'category' && hasCategoryFilter
+            ? 'category'
+            : 'none';
 
     return {
       id: b.id,
