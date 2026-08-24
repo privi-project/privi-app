@@ -6,15 +6,9 @@ import { COLORS } from '@/constants/colors';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { ChevronLeftIcon, GiftIcon } from '@/components/NavIcons';
 import { fetchReferralSummary, ReferredMember } from '@/services/referrals';
+import { fetchAppLinks } from '@/services/appLinks';
 import { useAuthStore } from '@/store/auth';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
-
-// Not fetched from system_settings — no screen in the App currently
-// wires those admin-configured URLs up dynamically (Support & Settings'
-// own Help Centre link is the same hardcoded-constant pattern), so this
-// matches how every other legal link already works today rather than
-// being the one screen that does it differently.
-const REFERRAL_TERMS_URL = 'https://privi.info/legal/referral-program-terms';
 
 export default function ReferralsScreen() {
   const router = useRouter();
@@ -27,8 +21,12 @@ export default function ReferralsScreen() {
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [referred, setReferred] = useState<ReferredMember[]>([]);
+  // Falls back to the last-known-good hardcoded URL inside fetchAppLinks
+  // itself on any failure, so this is never left null in practice.
+  const [referralTermsUrl, setReferralTermsUrl] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    fetchAppLinks().then((links) => setReferralTermsUrl(links.referralTermsUrl));
     if (!user) {
       setLoading(false);
       return;
@@ -139,7 +137,10 @@ export default function ReferralsScreen() {
             ))
           )}
 
-          <Pressable style={styles.termsLink} onPress={() => WebBrowser.openBrowserAsync(REFERRAL_TERMS_URL)}>
+          <Pressable
+            style={styles.termsLink}
+            onPress={() => referralTermsUrl && WebBrowser.openBrowserAsync(referralTermsUrl)}
+          >
             <GoldGradientText style={styles.termsLinkText}>Referral Programme Terms</GoldGradientText>
           </Pressable>
         </ScrollView>

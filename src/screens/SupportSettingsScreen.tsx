@@ -18,11 +18,10 @@ import {
   updateNotificationPreferences,
   NotificationPreferences,
 } from '@/services/profile';
+import { fetchAppLinks } from '@/services/appLinks';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useThemeStore } from '@/store/theme';
 import { useAuthStore } from '@/store/auth';
-
-const HELP_CENTRE_URL = 'https://privi.info/help';
 
 export default function SupportSettingsScreen() {
   const router = useRouter();
@@ -42,12 +41,16 @@ export default function SupportSettingsScreen() {
     notify_special_offers: true,
     notify_account_alerts: true,
   });
+  // Falls back to the last-known-good hardcoded URL inside fetchAppLinks
+  // itself on any failure, so this is never left null in practice.
+  const [helpCentreUrl, setHelpCentreUrl] = useState<string | null>(null);
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
   const textColor = isDark ? COLORS.ivory : COLORS.charcoal;
   const subColor = isDark ? '#9CA3AF' : COLORS.mediumGray;
 
   const load = useCallback(async () => {
+    fetchAppLinks().then((links) => setHelpCentreUrl(links.helpFaqUrl));
     if (!user) {
       setLoading(false);
       return;
@@ -100,7 +103,10 @@ export default function SupportSettingsScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GoldGradientText style={styles.sectionHeading}>HELP</GoldGradientText>
-        <Pressable style={styles.row} onPress={() => WebBrowser.openBrowserAsync(HELP_CENTRE_URL)}>
+        <Pressable
+          style={styles.row}
+          onPress={() => helpCentreUrl && WebBrowser.openBrowserAsync(helpCentreUrl)}
+        >
           <HelpIcon color={COLORS.gold} size={20} />
           <Text style={[styles.rowLabel, styles.rowLabelFlex, { color: textColor }]}>FAQs</Text>
           <ChevronRightIcon color={COLORS.gold} size={18} />
