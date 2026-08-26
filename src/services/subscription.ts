@@ -13,6 +13,13 @@ export interface SubscriptionInfo {
    * Covers both paid (active/past_due) and complimentary (unexpired)
    * members with one flag. */
   entitled: boolean;
+  isComplimentary: boolean;
+  /** Null means either not complimentary, or complimentary with no time
+   * limit (grantComplimentaryAction's "leave blank for permanent") — the
+   * latter has genuinely nothing to continue, since access never lapses
+   * on its own. Only a time-limited complimentary member (both true and
+   * this set) should ever see a "continue my membership" prompt. */
+  complimentaryExpiresAt: string | null;
 }
 
 const WEBSITE_API_URL = process.env.EXPO_PUBLIC_WEBSITE_API_URL ?? 'https://privi.info';

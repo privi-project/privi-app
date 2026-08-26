@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS } from '@/constants/colors';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { Wordmark } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
-import { BellIcon, AccountIcon, SettingsIcon, ChevronRightIcon, GiftIcon } from '@/components/NavIcons';
+import { BellIcon, AccountIcon, SettingsIcon, ChevronRightIcon, GiftIcon, CardIcon } from '@/components/NavIcons';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { SignOutModal } from '@/components/SignOutModal';
 import { useNotificationDot } from '@/hooks/useNotificationDot';
+import { fetchSubscriptionInfo, fetchContinueMembershipLink } from '@/services/subscription';
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -18,6 +19,41 @@ export default function AccountScreen() {
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const { hasNotifications, refresh: refreshNotificationDot } = useNotificationDot();
   const [signOutVisible, setSignOutVisible] = useState(false);
+
+  // Only a time-limited complimentary member has anything to "continue" —
+  // a permanent one (complimentary_expires_at left blank when granted)
+  // never lapses on its own, so the card stays hidden for them, same as
+  // for an ordinary paying member. Null while still loading, so the card
+  // never flashes on then off.
+  const [continueExpiresOn, setContinueExpiresOn] = useState<string | null>(null);
+  const [continuing, setContinuing] = useState(false);
+  const [continueError, setContinueError] = useState(false);
+
+  useEffect(() => {
+    fetchSubscriptionInfo().then((info) => {
+      if (info?.isComplimentary && info.complimentaryExpiresAt) {
+        setContinueExpiresOn(
+          new Date(info.complimentaryExpiresAt).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }),
+        );
+      }
+    });
+  }, []);
+
+  const handleContinueMembership = useCallback(async () => {
+    setContinuing(true);
+    setContinueError(false);
+    const url = await fetchContinueMembershipLink();
+    setContinuing(false);
+    if (url) {
+      Linking.openURL(url);
+    } else {
+      setContinueError(true);
+    }
+  }, []);
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
 
@@ -42,6 +78,35 @@ export default function AccountScreen() {
       </View>
 
       <View style={styles.cards}>
+        {continueExpiresOn && (
+          <View>
+            <Pressable onPress={handleContinueMembership} disabled={continuing}>
+              <GoldGradientBorder borderWidth={1.5} borderRadius={14} backgroundColor={COLORS.teal} style={styles.cardBorder}>
+                <View style={styles.card}>
+                  <CardIcon color={COLORS.gold} size={26} />
+                  <View style={styles.cardText}>
+                    <Text style={styles.cardTitle}>Continue My Membership</Text>
+                    <Text style={styles.cardSubtitle}>
+                      Your complimentary access ends {continueExpiresOn} — set this up now and
+                      you won&apos;t be charged until then
+                    </Text>
+                  </View>
+                  {continuing ? (
+                    <ActivityIndicator color={COLORS.gold} size="small" />
+                  ) : (
+                    <ChevronRightIcon color={COLORS.gold} size={20} />
+                  )}
+                </View>
+              </GoldGradientBorder>
+            </Pressable>
+            {continueError && (
+              <Text style={styles.continueErrorText}>
+                Something went wrong opening the Privi website. Please try again.
+              </Text>
+            )}
+          </View>
+        )}
+
         <Pressable onPress={() => router.push('/personal-information')}>
           <GoldGradientBorder borderWidth={1.5} borderRadius={14} backgroundColor={COLORS.teal} style={styles.cardBorder}>
             <View style={styles.card}>
@@ -156,6 +221,12 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontSize: 12,
     color: 'rgba(247,246,242,0.85)',
+  },
+  continueErrorText: {
+    fontSize: 11,
+    color: '#E56B6B',
+    marginTop: 6,
+    marginLeft: 4,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
