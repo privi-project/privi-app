@@ -4,9 +4,6 @@ export interface AppLinks {
   helpFaqUrl: string | null;
   privacyPolicyUrl: string | null;
   termsUrl: string | null;
-  subscriptionTermsUrl: string | null;
-  memberRulesUrl: string | null;
-  referralTermsUrl: string | null;
   supportEmail: string | null;
 }
 
@@ -15,13 +12,16 @@ export interface AppLinks {
 // Admin Portal's Settings page (App Data → Settings) is the real,
 // live-editable source once this fetch is working; these values just
 // stop a broken network call from breaking a button.
+//
+// subscriptionTermsUrl/memberRulesUrl/referralTermsUrl were removed
+// 2026-08-26 — Subscription Terms, Members' Rules and Referral Programme
+// Terms were all folded into Terms & Conditions as sections, so every
+// screen that used to link to one of those now links to termsUrl
+// instead (see ReferralsScreen.tsx).
 const FALLBACK: AppLinks = {
   helpFaqUrl: 'https://privi.info/help',
   privacyPolicyUrl: 'https://privi.info/legal/privacy-policy',
   termsUrl: 'https://privi.info/legal/terms-and-conditions',
-  subscriptionTermsUrl: 'https://privi.info/legal/subscription-terms',
-  memberRulesUrl: 'https://privi.info/legal/members-rules',
-  referralTermsUrl: 'https://privi.info/legal/referral-program-terms',
   supportEmail: null,
 };
 
@@ -43,9 +43,6 @@ export async function fetchAppLinks(): Promise<AppLinks> {
     helpFaqUrl: data.help_faq_url ?? FALLBACK.helpFaqUrl,
     privacyPolicyUrl: data.privacy_policy_url ?? FALLBACK.privacyPolicyUrl,
     termsUrl: data.terms_url ?? FALLBACK.termsUrl,
-    subscriptionTermsUrl: data.subscription_terms_url ?? FALLBACK.subscriptionTermsUrl,
-    memberRulesUrl: data.member_rules_url ?? FALLBACK.memberRulesUrl,
-    referralTermsUrl: data.referral_terms_url ?? FALLBACK.referralTermsUrl,
     supportEmail: data.support_email ?? FALLBACK.supportEmail,
   };
 }

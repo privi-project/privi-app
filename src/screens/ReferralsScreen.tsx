@@ -21,12 +21,15 @@ export default function ReferralsScreen() {
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [referred, setReferred] = useState<ReferredMember[]>([]);
-  // Falls back to the last-known-good hardcoded URL inside fetchAppLinks
-  // itself on any failure, so this is never left null in practice.
-  const [referralTermsUrl, setReferralTermsUrl] = useState<string | null>(null);
+  // Referral Programme Terms is now a section within Terms & Conditions
+  // rather than its own page (folded in 2026-08-26), so this links to
+  // termsUrl. Falls back to the last-known-good hardcoded URL inside
+  // fetchAppLinks itself on any failure, so this is never left null in
+  // practice.
+  const [termsUrl, setTermsUrl] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    fetchAppLinks().then((links) => setReferralTermsUrl(links.referralTermsUrl));
+    fetchAppLinks().then((links) => setTermsUrl(links.termsUrl));
     if (!user) {
       setLoading(false);
       return;
@@ -139,7 +142,7 @@ export default function ReferralsScreen() {
 
           <Pressable
             style={styles.termsLink}
-            onPress={() => referralTermsUrl && WebBrowser.openBrowserAsync(referralTermsUrl)}
+            onPress={() => termsUrl && WebBrowser.openBrowserAsync(termsUrl)}
           >
             <GoldGradientText style={styles.termsLinkText}>Referral Programme Terms</GoldGradientText>
           </Pressable>
