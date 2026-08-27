@@ -435,3 +435,21 @@ export function ArrowUpIcon({ color, size = 20 }: IconProps) {
     </Svg>
   );
 }
+
+// Report-an-issue affordance on OfferScreen — deliberately plain/small,
+// not alarm-red or attention-grabbing, since it's meant to sit quietly
+// below the redemption card rather than compete with it.
+export function FlagIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 4v16" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d="M6 4.5c2-1 4-1 6 0s4 1 6 0v9c-2 1-4 1-6 0s-4-1-6 0v-9z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}

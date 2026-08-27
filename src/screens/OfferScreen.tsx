@@ -3,12 +3,15 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platf
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import * as ScreenCapture from 'expo-screen-capture';
 import { COLORS } from '@/constants/colors';
-import { ChevronLeftIcon, ClockIcon, GiftIcon, ShieldCheckIcon } from '@/components/NavIcons';
+import { ChevronLeftIcon, ClockIcon, GiftIcon, ShieldCheckIcon, FlagIcon } from '@/components/NavIcons';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { OfferTypeIcon } from '@/components/OfferTypeIcon';
 import { OfferDetail, fetchOfferDetail } from '@/services/offers';
+import { OfferReportReason, reportOffer } from '@/services/offerReports';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
+import { ActionSheet } from '@/components/ActionSheet';
+import { FloatingModal } from '@/components/FloatingModal';
 
 // Combines redemption_method (how the code/barcode is presented) with
 // redeem_where (where it can be used) into one accurate instruction —
@@ -42,6 +45,18 @@ function barWidths(value: string): number[] {
   return widths;
 }
 
+// Short, specific reasons rather than a raw "report" tap — the choice
+// itself is the friction that keeps this from being an idle-tap button,
+// and it gives an admin reviewing offer_reports something more useful
+// than a bare count. Kept in this order deliberately: most-likely-genuine
+// complaint first, catch-all last.
+const REPORT_REASONS: { reason: OfferReportReason; label: string }[] = [
+  { reason: 'not_honoured', label: "The business wouldn't honour this offer" },
+  { reason: 'not_as_described', label: "The offer wasn't as described" },
+  { reason: 'already_expired', label: 'The offer had already expired' },
+  { reason: 'other', label: 'Something else' },
+];
+
 export default function OfferScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -51,6 +66,9 @@ export default function OfferScreen() {
   const [offer, setOffer] = useState<OfferDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [reportSheetVisible, setReportSheetVisible] = useState(false);
+  const [reportConfirmVisible, setReportConfirmVisible] = useState(false);
+  const [reportError, setReportError] = useState(false);
 
   const backgroundColor = isDark ? COLORS.charcoal : COLORS.ivory;
   const textColor = isDark ? COLORS.ivory : COLORS.charcoal;
@@ -104,6 +122,17 @@ export default function OfferScreen() {
   );
 
   const bars = useMemo(() => barWidths(offer?.redemption_value ?? ''), [offer?.redemption_value]);
+
+  const handleReportReason = async (reason: OfferReportReason) => {
+    if (!offer) return;
+    try {
+      await reportOffer(offer.id, reason);
+      setReportConfirmVisible(true);
+    } catch (e) {
+      console.error('Failed to report offer', e);
+      setReportError(true);
+    }
+  };
 
   // Admin Portal lets value_summary be filled in independently of title —
   // when the two end up saying the same thing (a real case seen in
@@ -215,9 +244,46 @@ export default function OfferScreen() {
             </View>
           </GoldGradientBorder>
         )}
+
+        <Pressable
+          style={styles.reportRow}
+          onPress={() => setReportSheetVisible(true)}
+          hitSlop={8}
+        >
+          <FlagIcon color={subColor} size={14} />
+          <Text style={[styles.reportRowText, { color: subColor }]}>Report an issue with this offer</Text>
+        </Pressable>
       </ScrollView>
 
       <BottomNavBar />
+
+      <ActionSheet
+        visible={reportSheetVisible}
+        onClose={() => setReportSheetVisible(false)}
+        title="What went wrong?"
+        items={REPORT_REASONS.map(({ reason, label }) => ({
+          key: reason,
+          icon: <FlagIcon color={COLORS.gold} size={20} />,
+          label,
+          onPress: () => handleReportReason(reason),
+        }))}
+      />
+
+      <FloatingModal
+        visible={reportConfirmVisible}
+        onClose={() => setReportConfirmVisible(false)}
+        icon={<FlagIcon color={COLORS.gold} size={24} />}
+        title="Thanks for letting us know"
+        description="We've logged this and our team will look into it."
+      />
+
+      <FloatingModal
+        visible={reportError}
+        onClose={() => setReportError(false)}
+        icon={<FlagIcon color={COLORS.gold} size={24} />}
+        title="Couldn't send that"
+        description="Please check your connection and try again."
+      />
     </View>
   );
 }
@@ -300,6 +366,18 @@ const styles = StyleSheet.create({
   },
   redemptionCard: {
     marginTop: 12,
+  },
+  reportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 24,
+    paddingVertical: 8,
+  },
+  reportRowText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   redemptionCardInner: {
     padding: 20,
