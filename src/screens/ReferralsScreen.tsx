@@ -79,12 +79,12 @@ export default function ReferralsScreen() {
           <View style={styles.explainer}>
             <GiftIcon color={COLORS.gold} size={28} />
             <Text style={[styles.explainerTitle, { color: textColor }]}>
-              Give a friend their second month free
+              Refer a friend, get a free month
             </Text>
             <Text style={[styles.explainerBody, { color: subColor }]}>
-              Share your code with a friend, and their second month is free once they join. Once
+              Share your code with a friend, and their second month is free once they join. When
               their first payment clears, you get a free month too. There&apos;s no limit on how
-              many friends you can refer — but you can only have{' '}
+              many friends you can refer, but you can only have{' '}
               {rewardCap === 1 ? '1 free month' : `up to ${rewardCap} free months' worth`} banked
               from referrals at a time. Once that&apos;s used, referring again starts earning
               rewards straight away.
