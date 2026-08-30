@@ -20,6 +20,13 @@ export interface SubscriptionInfo {
    * on its own. Only a time-limited complimentary member (both true and
    * this set) should ever see a "continue my membership" prompt. */
   complimentaryExpiresAt: string | null;
+  /** Live referral-reward cap status (2026-08-31) — would one more
+   * referral reward right now push this member's banked Stripe credit
+   * over one full cycle's worth? Null when there's no Stripe customer
+   * to check (never started a payment). Used by the Referrals screen so
+   * it can show real current state, not just a static explanation of
+   * the cap mechanic. */
+  referralAtCap: boolean | null;
 }
 
 const WEBSITE_API_URL = process.env.EXPO_PUBLIC_WEBSITE_API_URL ?? 'https://privi.info';

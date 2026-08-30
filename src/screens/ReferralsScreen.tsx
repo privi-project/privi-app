@@ -5,8 +5,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { COLORS } from '@/constants/colors';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { ChevronLeftIcon, GiftIcon } from '@/components/NavIcons';
-import { fetchReferralSummary, ReferredMember } from '@/services/referrals';
+import { fetchReferralSummary, referralRewardCap, ReferredMember } from '@/services/referrals';
 import { fetchAppLinks } from '@/services/appLinks';
+import { fetchSubscriptionInfo } from '@/services/subscription';
 import { useAuthStore } from '@/store/auth';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 
@@ -20,7 +21,17 @@ export default function ReferralsScreen() {
   const subColor = isDark ? '#9CA3AF' : COLORS.mediumGray;
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
   const [referred, setReferred] = useState<ReferredMember[]>([]);
+  // Live cap status + the member's own renewal date (2026-08-31,
+  // founder feedback: the old copy explained the cap but never said
+  // whether THIS member currently has room, or when a banked reward
+  // actually clears — this ties both to their real Stripe state rather
+  // than leaving it abstract). Null while unknown/unavailable (e.g. no
+  // Stripe customer yet) — the status line below is simply hidden then,
+  // rather than showing a guess.
+  const [referralAtCap, setReferralAtCap] = useState<boolean | null>(null);
+  const [renewalDate, setRenewalDate] = useState<string | null>(null);
   // Referral Programme Terms is now a section within Terms & Conditions
   // rather than its own page (folded in 2026-08-26), so this links to
   // termsUrl. Falls back to the last-known-good hardcoded URL inside
@@ -34,9 +45,15 @@ export default function ReferralsScreen() {
       setLoading(false);
       return;
     }
-    const summary = await fetchReferralSummary(user.id);
+    const [summary, subscription] = await Promise.all([
+      fetchReferralSummary(user.id),
+      fetchSubscriptionInfo(),
+    ]);
     setReferralCode(summary.referralCode);
+    setPlan(summary.plan);
     setReferred(summary.referred);
+    setReferralAtCap(subscription?.referralAtCap ?? null);
+    setRenewalDate(subscription?.renewalDate ?? null);
     setLoading(false);
   }, [user]);
 
@@ -48,6 +65,13 @@ export default function ReferralsScreen() {
   // changes, and "3 free months earned" is just as motivating as a price
   // without needing the app to know what the current monthly rate is.
   const rewardedCount = referred.filter((m) => m.status === 'rewarded').length;
+  // 1 for monthly, 12 for annual (see referralRewardCap's own comment) —
+  // referring itself is unlimited, only how many rewards can be banked
+  // at once is capped.
+  const rewardCap = referralRewardCap(plan);
+  const renewalDateLabel = renewalDate
+    ? new Date(renewalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
 
   const handleShare = () => {
     if (!referralCode) return;
@@ -73,14 +97,34 @@ export default function ReferralsScreen() {
           <View style={styles.explainer}>
             <GiftIcon color={COLORS.gold} size={28} />
             <Text style={[styles.explainerTitle, { color: textColor }]}>
-              Give a friend their second month free
+              Refer a friend, get a free month
             </Text>
             <Text style={[styles.explainerBody, { color: subColor }]}>
-              Share your code with a friend, and their second month is free once they join. Once
-              their first payment clears, you get a free month too — with no limit on how many
-              friends you can refer.
+              Share your code with a friend, and their second month is free once they join. When
+              their first payment clears, you get a free month too. There&apos;s no limit on how
+              many friends you can refer, but you can only have{' '}
+              {rewardCap === 1 ? '1 free month' : `up to ${rewardCap} free months' worth`} banked
+              at a time — each reward comes off automatically at your next renewal, which is also
+              when a new one frees up.
             </Text>
           </View>
+
+          {referralAtCap !== null && (
+            <View
+              style={[
+                styles.capStatus,
+                referralAtCap ? styles.capStatusAtCap : styles.capStatusAvailable,
+              ]}
+            >
+              <Text style={[styles.capStatusText, { color: referralAtCap ? subColor : COLORS.teal }]}>
+                {referralAtCap
+                  ? `You're at your referral cap right now${
+                      renewalDateLabel ? ` — it frees up at your next renewal, on ${renewalDateLabel}` : ''
+                    }.`
+                  : "You've got room for a new referral reward right now."}
+              </Text>
+            </View>
+          )}
 
           {referred.length > 0 && (
             <View style={styles.statsRow}>
@@ -129,11 +173,24 @@ export default function ReferralsScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    member.status === 'rewarded' ? styles.statusBadgeRewarded : styles.statusBadgePending,
+                    member.status === 'rewarded'
+                      ? styles.statusBadgeRewarded
+                      : member.status === 'capped'
+                        ? styles.statusBadgeCapped
+                        : styles.statusBadgePending,
                   ]}
                 >
-                  <Text style={[styles.statusBadgeText, { color: textColor }]}>
-                    {member.status === 'rewarded' ? 'Reward earned' : 'Pending'}
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      { color: member.status === 'capped' ? subColor : textColor },
+                    ]}
+                  >
+                    {member.status === 'rewarded'
+                      ? 'Reward earned'
+                      : member.status === 'capped'
+                        ? 'Already banked'
+                        : 'Pending'}
                   </Text>
                 </View>
               </View>
@@ -191,6 +248,23 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 19,
+  },
+  capStatus: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 20,
+  },
+  capStatusAvailable: {
+    backgroundColor: 'rgba(111,167,161,0.12)',
+  },
+  capStatusAtCap: {
+    backgroundColor: 'rgba(156,163,175,0.12)',
+  },
+  capStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   statsRow: {
     flexDirection: 'row',
@@ -278,6 +352,13 @@ const styles = StyleSheet.create({
   statusBadgePending: {
     borderWidth: 1,
     borderColor: COLORS.gold,
+  },
+  // Deliberately muted/neutral, not gold (pending) or teal (rewarded) —
+  // this isn't a call to action or a celebration, just a factual "this
+  // one didn't add anything new" state.
+  statusBadgeCapped: {
+    borderWidth: 1,
+    borderColor: 'rgba(156,163,175,0.4)',
   },
   statusBadgeText: {
     fontSize: 11,
