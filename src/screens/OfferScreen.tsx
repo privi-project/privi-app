@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import * as ScreenCapture from 'expo-screen-capture';
 import { COLORS } from '@/constants/colors';
@@ -12,6 +12,7 @@ import { OfferReportReason, reportOffer } from '@/services/offerReports';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { ActionSheet } from '@/components/ActionSheet';
 import { FloatingModal } from '@/components/FloatingModal';
+import { Barcode128 } from '@/components/Barcode128';
 
 // Combines redemption_method (how the code/barcode is presented) with
 // redeem_where (where it can be used) into one accurate instruction —
@@ -30,19 +31,6 @@ function getRedeemInstructions(offer: Pick<OfferDetail, 'redemption_method' | 'r
     return `Show this ${noun} in person, or enter it at checkout online.`;
   }
   return `Show this ${noun} before payment.`;
-}
-
-// Deterministic decorative bar pattern from the code string — this is not
-// a real scannable barcode encoding (staff read the printed digits, they
-// don't scan the app screen), just a visual echo of the mockup's barcode
-// graphic.
-function barWidths(value: string): number[] {
-  const widths: number[] = [];
-  for (let i = 0; i < 40; i++) {
-    const c = value.charCodeAt(i % Math.max(value.length, 1)) || 1;
-    widths.push(1 + ((c + i * 7) % 3));
-  }
-  return widths;
 }
 
 // Short, specific reasons rather than a raw "report" tap — the choice
@@ -121,7 +109,11 @@ export default function OfferScreen() {
     }, [load])
   );
 
-  const bars = useMemo(() => barWidths(offer?.redemption_value ?? ''), [offer?.redemption_value]);
+  const { width: windowWidth } = useWindowDimensions();
+  // scrollContent padding (20*2) + redemptionCardInner padding (20*2) +
+  // GoldGradientBorder's own border (~1.5*2) — the actual available width
+  // inside the redemption card, so the barcode never overflows it.
+  const barcodeMaxWidth = windowWidth - 83;
 
   const handleReportReason = async (reason: OfferReportReason) => {
     if (!offer) return;
@@ -228,14 +220,7 @@ export default function OfferScreen() {
                 </>
               ) : (
                 <>
-                  <View style={styles.barcodeRow}>
-                    {bars.map((w, i) => (
-                      <View
-                        key={i}
-                        style={{ width: w, height: 56, backgroundColor: isDark ? COLORS.ivory : COLORS.charcoal }}
-                      />
-                    ))}
-                  </View>
+                  <Barcode128 value={offer.redemption_value} maxWidth={barcodeMaxWidth} />
                   <Text style={[styles.codeText, { color: textColor, marginTop: 12 }]}>
                     {offer.redemption_value}
                   </Text>
@@ -393,11 +378,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: 1,
-  },
-  barcodeRow: {
-    flexDirection: 'row',
-    gap: 2,
-    alignItems: 'center',
   },
   emptyTitle: {
     fontSize: 15,
