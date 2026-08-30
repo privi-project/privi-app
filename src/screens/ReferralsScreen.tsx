@@ -5,7 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { COLORS } from '@/constants/colors';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
 import { ChevronLeftIcon, GiftIcon } from '@/components/NavIcons';
-import { fetchReferralSummary, ReferredMember } from '@/services/referrals';
+import { fetchReferralSummary, referralRewardCap, ReferredMember } from '@/services/referrals';
 import { fetchAppLinks } from '@/services/appLinks';
 import { useAuthStore } from '@/store/auth';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
@@ -20,6 +20,7 @@ export default function ReferralsScreen() {
   const subColor = isDark ? '#9CA3AF' : COLORS.mediumGray;
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
   const [referred, setReferred] = useState<ReferredMember[]>([]);
   // Referral Programme Terms is now a section within Terms & Conditions
   // rather than its own page (folded in 2026-08-26), so this links to
@@ -36,6 +37,7 @@ export default function ReferralsScreen() {
     }
     const summary = await fetchReferralSummary(user.id);
     setReferralCode(summary.referralCode);
+    setPlan(summary.plan);
     setReferred(summary.referred);
     setLoading(false);
   }, [user]);
@@ -48,6 +50,10 @@ export default function ReferralsScreen() {
   // changes, and "3 free months earned" is just as motivating as a price
   // without needing the app to know what the current monthly rate is.
   const rewardedCount = referred.filter((m) => m.status === 'rewarded').length;
+  // 1 for monthly, 12 for annual (see referralRewardCap's own comment) —
+  // referring itself is unlimited, only how many rewards can be banked
+  // at once is capped.
+  const rewardCap = referralRewardCap(plan);
 
   const handleShare = () => {
     if (!referralCode) return;
@@ -77,8 +83,11 @@ export default function ReferralsScreen() {
             </Text>
             <Text style={[styles.explainerBody, { color: subColor }]}>
               Share your code with a friend, and their second month is free once they join. Once
-              their first payment clears, you get a free month too — with no limit on how many
-              friends you can refer.
+              their first payment clears, you get a free month too. There&apos;s no limit on how
+              many friends you can refer — but you can only have{' '}
+              {rewardCap === 1 ? '1 free month' : `up to ${rewardCap} free months' worth`} banked
+              from referrals at a time. Once that&apos;s used, referring again starts earning
+              rewards straight away.
             </Text>
           </View>
 
@@ -129,11 +138,24 @@ export default function ReferralsScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    member.status === 'rewarded' ? styles.statusBadgeRewarded : styles.statusBadgePending,
+                    member.status === 'rewarded'
+                      ? styles.statusBadgeRewarded
+                      : member.status === 'capped'
+                        ? styles.statusBadgeCapped
+                        : styles.statusBadgePending,
                   ]}
                 >
-                  <Text style={[styles.statusBadgeText, { color: textColor }]}>
-                    {member.status === 'rewarded' ? 'Reward earned' : 'Pending'}
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      { color: member.status === 'capped' ? subColor : textColor },
+                    ]}
+                  >
+                    {member.status === 'rewarded'
+                      ? 'Reward earned'
+                      : member.status === 'capped'
+                        ? 'Already banked'
+                        : 'Pending'}
                   </Text>
                 </View>
               </View>
@@ -278,6 +300,13 @@ const styles = StyleSheet.create({
   statusBadgePending: {
     borderWidth: 1,
     borderColor: COLORS.gold,
+  },
+  // Deliberately muted/neutral, not gold (pending) or teal (rewarded) —
+  // this isn't a call to action or a celebration, just a factual "this
+  // one didn't add anything new" state.
+  statusBadgeCapped: {
+    borderWidth: 1,
+    borderColor: 'rgba(156,163,175,0.4)',
   },
   statusBadgeText: {
     fontSize: 11,
