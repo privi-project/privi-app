@@ -382,7 +382,14 @@ export default function HomeScreen() {
               <SearchIcon color={placeholderColor} />
               <TextInput
                 style={[styles.searchInput, { color: textColor }]}
-                placeholder="Search businesses, towns, categories or keywords"
+                // "Privi" as the verb here (2026-08-31, founder
+                // direction) — the one real search box in the app,
+                // the exact moment "Google it" describes. Kept the
+                // full functional guidance (what you can actually
+                // search for), just swapped the generic "Search" for
+                // the brand verb — same quiet seeding as the
+                // Favourites empty state, deliberately not everywhere.
+                placeholder="Privi businesses, towns, categories or keywords"
                 placeholderTextColor={placeholderColor}
                 value={queryInput}
                 onChangeText={setQueryInput}

@@ -115,7 +115,12 @@ export default function FavouritesScreen() {
           <HeartIcon color={COLORS.gold} size={32} />
           <Text style={[styles.emptyTitle, { color: textColor }]}>No favourites yet</Text>
           <Text style={[styles.emptySubtitle, { color: subColor }]}>
-            Tap the heart on any business to save it here.
+            {/* "Privi" used as a verb (2026-08-31, founder direction) —
+                quiet, deliberate seeding toward "Privi it" becoming a
+                natural verb over time, same spirit as "Google it".
+                Kept to a small, chosen set of spots rather than
+                everywhere — see also the Home search placeholder. */}
+            Privi something for today, tap the heart for tomorrow.
           </Text>
         </View>
       ) : (
