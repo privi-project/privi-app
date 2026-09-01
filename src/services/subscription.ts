@@ -40,11 +40,24 @@ export async function fetchSubscriptionInfo(): Promise<SubscriptionInfo | null> 
   const token = data.session?.access_token;
   if (!token) return null;
 
-  const res = await fetch(`${WEBSITE_API_URL}/api/app/subscription`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  return res.json();
+  // 2026-09-01, real bug found on a standalone build: fetch() throws (not
+  // just a non-ok response) when the host is flat-out unreachable — a
+  // misconfigured URL, no signal, a brief backend outage. That rejection
+  // was going unhandled at every call site, and the (app) layout gate in
+  // particular never catches it, so `checking` there stayed true forever
+  // and the whole app sat stuck behind its loading screen. This function's
+  // own contract has always said "returns null on any failure" — try/catch
+  // is what actually makes that true, for a network failure and not just a
+  // non-ok HTTP status.
+  try {
+    const res = await fetch(`${WEBSITE_API_URL}/api/app/subscription`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -61,11 +74,18 @@ export async function fetchContinueMembershipLink(): Promise<string | null> {
   const token = sessionData.session?.access_token;
   if (!token) return null;
 
-  const res = await fetch(`${WEBSITE_API_URL}/api/app/continue-membership-link`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  const body = await res.json();
-  return body.url ?? null;
+  // Same fix as fetchSubscriptionInfo above — without this, a network
+  // failure here left handleContinueMembership's spinner stuck forever
+  // instead of ever reaching its own error state.
+  try {
+    const res = await fetch(`${WEBSITE_API_URL}/api/app/continue-membership-link`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body.url ?? null;
+  } catch {
+    return null;
+  }
 }
