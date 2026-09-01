@@ -38,6 +38,7 @@ import {
   getMemberLocation,
   formatOpeningHoursToday,
 } from '@/services/businesses';
+import { triggerHaptic } from '@/lib/haptics';
 import { OfferSummary, fetchBusinessOffers } from '@/services/offers';
 import { openDirections } from '@/utils/mapsHandoff';
 import { useAuthStore } from '@/store/auth';
@@ -125,6 +126,7 @@ export default function BusinessScreen() {
 
   const handleToggleFavourite = async () => {
     if (!user || !business) return;
+    triggerHaptic();
     const next = !isFavourite;
     setIsFavourite(next);
     try {

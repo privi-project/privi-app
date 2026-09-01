@@ -5,6 +5,7 @@ import { COLORS } from '@/constants/colors';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { HomeIcon, MapPinIcon, HeartIcon, AccountIcon } from '@/components/NavIcons';
 import { useHomeResetStore } from '@/store/homeReset';
+import { triggerTabHaptic } from '@/lib/haptics';
 
 export default function TabsLayout() {
   const colorScheme = useAppColorScheme();
@@ -13,6 +14,16 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      // Fires for every tab (screenListeners applies navigator-wide, in
+      // addition to — not instead of — the Home tab's own per-screen
+      // listener below, React Navigation calls both). Selection, not
+      // Impact — see triggerTabHaptic's own comment for why this is
+      // deliberately the lighter of the two haptic types.
+      screenListeners={{
+        tabPress: () => {
+          triggerTabHaptic();
+        },
+      }}
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
