@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { COLORS } from '@/constants/colors';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { Wordmark } from '@/components/BrandMark';
@@ -29,19 +29,27 @@ export default function AccountScreen() {
   const [continuing, setContinuing] = useState(false);
   const [continueError, setContinueError] = useState(false);
 
-  useEffect(() => {
-    fetchSubscriptionInfo().then((info) => {
-      if (info?.isComplimentary && info.complimentaryExpiresAt) {
+  // Account is a tab screen — it stays mounted when you switch away, so a
+  // plain useEffect only ever fetched this once, on the app's very first
+  // render of this tab. An admin-side change (e.g. setting a complimentary
+  // expiry) never showed up here until a full app reload. useFocusEffect
+  // re-runs every time this tab is actually focused, matching the same fix
+  // already applied to Favourites/Home for the same reason.
+  useFocusEffect(
+    useCallback(() => {
+      fetchSubscriptionInfo().then((info) => {
         setContinueExpiresOn(
-          new Date(info.complimentaryExpiresAt).toLocaleDateString('en-GB', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          }),
+          info?.isComplimentary && info.complimentaryExpiresAt
+            ? new Date(info.complimentaryExpiresAt).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })
+            : null,
         );
-      }
-    });
-  }, []);
+      });
+    }, []),
+  );
 
   const handleContinueMembership = useCallback(async () => {
     setContinuing(true);
