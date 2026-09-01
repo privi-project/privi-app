@@ -32,6 +32,14 @@ export default function ReferralsScreen() {
   // rather than showing a guess.
   const [referralAtCap, setReferralAtCap] = useState<boolean | null>(null);
   const [renewalDate, setRenewalDate] = useState<string | null>(null);
+  // 2026-09-01, founder finding: a complimentary member (no Stripe
+  // subscription, no renewal cycle) was shown the same "refer a friend,
+  // get a free month... comes off at your next renewal" copy as a paying
+  // member — every claim in it is false for them, since there's no
+  // billing on their account to credit. Their friend's own discount still
+  // works fine either way (resolve_referral_code doesn't care about the
+  // referrer's plan) — only the "what YOU get" framing needs to change.
+  const [isComplimentary, setIsComplimentary] = useState(false);
   // Referral Programme Terms is now a section within Terms & Conditions
   // rather than its own page (folded in 2026-08-26), so this links to
   // termsUrl. Falls back to the last-known-good hardcoded URL inside
@@ -54,6 +62,7 @@ export default function ReferralsScreen() {
     setReferred(summary.referred);
     setReferralAtCap(subscription?.referralAtCap ?? null);
     setRenewalDate(subscription?.renewalDate ?? null);
+    setIsComplimentary(subscription?.isComplimentary ?? false);
     setLoading(false);
   }, [user]);
 
@@ -97,19 +106,18 @@ export default function ReferralsScreen() {
           <View style={styles.explainer}>
             <GiftIcon color={COLORS.gold} size={28} />
             <Text style={[styles.explainerTitle, { color: textColor }]}>
-              Refer a friend, get a free month
+              {isComplimentary ? 'Refer a friend, they get a free month' : 'Refer a friend, get a free month'}
             </Text>
             <Text style={[styles.explainerBody, { color: subColor }]}>
-              Share your code with a friend, and their second month is free once they join. When
-              their first payment clears, you get a free month too. There&apos;s no limit on how
-              many friends you can refer, but you can only have{' '}
-              {rewardCap === 1 ? '1 free month' : `up to ${rewardCap} free months' worth`} banked
-              at a time — each reward comes off automatically at your next renewal, which is also
-              when a new one frees up.
+              {isComplimentary
+                ? "Share your code with a friend, and their second month is free once they join Privi. Your own access is complimentary, so there's no billing on your account for this to apply to — but it's still a great way to help a friend discover Privi."
+                : `Share your code with a friend, and their second month is free once they join. When their first payment clears, you get a free month too. There's no limit on how many friends you can refer, but you can only have ${
+                    rewardCap === 1 ? '1 free month' : `up to ${rewardCap} free months' worth`
+                  } banked at a time — each reward comes off automatically at your next renewal, which is also when a new one frees up.`}
             </Text>
           </View>
 
-          {referralAtCap !== null && (
+          {!isComplimentary && referralAtCap !== null && (
             <View
               style={[
                 styles.capStatus,
@@ -134,12 +142,16 @@ export default function ReferralsScreen() {
                   {referred.length === 1 ? 'Friend referred' : 'Friends referred'}
                 </Text>
               </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>{rewardedCount}</Text>
-                <Text style={[styles.statLabel, { color: subColor }]}>
-                  {rewardedCount === 1 ? 'Free month earned' : 'Free months earned'}
-                </Text>
-              </View>
+              {/* Hidden for complimentary members — no billing means no reward was
+                  ever actually credited, so this figure would just be misleading. */}
+              {!isComplimentary && (
+                <View style={styles.statCard}>
+                  <Text style={styles.statNumber}>{rewardedCount}</Text>
+                  <Text style={[styles.statLabel, { color: subColor }]}>
+                    {rewardedCount === 1 ? 'Free month earned' : 'Free months earned'}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 

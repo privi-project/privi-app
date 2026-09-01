@@ -252,11 +252,17 @@ export default function PersonalInformationScreen() {
         <Pressable onPress={() => setChangePasswordVisible(true)} style={styles.linkRow}>
           <GoldGradientText style={styles.link}>Change Password</GoldGradientText>
         </Pressable>
-        <Pressable onPress={handleManageSubscription} style={styles.linkRow} disabled={subscriptionLoading}>
-          <GoldGradientText style={styles.link}>
-            {subscriptionLoading ? 'Loading subscription…' : 'Manage Subscription'}
-          </GoldGradientText>
-        </Pressable>
+        {/* Hidden for complimentary members — there's no Stripe billing portal
+            to open until they've actually set up payment (see "Continue My
+            Membership" on the Account screen for that), so this used to be a
+            dead tap that did nothing. */}
+        {!subscription?.isComplimentary && (
+          <Pressable onPress={handleManageSubscription} style={styles.linkRow} disabled={subscriptionLoading}>
+            <GoldGradientText style={styles.link}>
+              {subscriptionLoading ? 'Loading subscription…' : 'Manage Subscription'}
+            </GoldGradientText>
+          </Pressable>
+        )}
 
         <View style={styles.divider} />
 
@@ -266,15 +272,37 @@ export default function PersonalInformationScreen() {
           icon={<CalendarIcon color={COLORS.gold} size={18} />}
           label="Membership Plan"
           value={
-            subscription?.plan
-              ? subscription.plan === 'monthly'
-                ? 'Monthly'
-                : 'Annual'
-              : '—'
+            subscription?.isComplimentary
+              ? 'Complimentary'
+              : subscription?.plan
+                ? subscription.plan === 'monthly'
+                  ? 'Monthly'
+                  : 'Annual'
+                : '—'
           }
           textColor={textColor}
           subColor={subColor}
         />
+        {/* Complimentary members have no renewal/payment method to show below —
+            this replaces that gap with the one thing that IS true for them:
+            whether (and when) their complimentary access actually ends. */}
+        {subscription?.isComplimentary && (
+          <InfoRow
+            icon={<CalendarIcon color={COLORS.gold} size={18} />}
+            label="Complimentary Until"
+            value={
+              subscription.complimentaryExpiresAt
+                ? new Date(subscription.complimentaryExpiresAt).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                : 'No end date'
+            }
+            textColor={textColor}
+            subColor={subColor}
+          />
+        )}
         {subscription?.renewalDate ? (
           <InfoRow
             icon={<CalendarIcon color={COLORS.gold} size={18} />}
