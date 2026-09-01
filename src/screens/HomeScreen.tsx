@@ -40,6 +40,7 @@ import { fetchActiveSeasonBanner, SeasonBanner as SeasonBannerData } from '@/ser
 import { useAuthStore } from '@/store/auth';
 import { useHomeResetStore } from '@/store/homeReset';
 import { useNotificationDot } from '@/hooks/useNotificationDot';
+import { triggerHaptic } from '@/lib/haptics';
 
 // Matches search_bar_animation.html exactly: bar contracts 100%->70% over
 // 0.4s while the filter bubble scales/fades into the space it leaves
@@ -312,6 +313,7 @@ export default function HomeScreen() {
 
   const handleToggleFavourite = async (businessId: string) => {
     if (!user) return;
+    triggerHaptic();
     const isFav = favouriteIds.has(businessId);
     const next = new Set(favouriteIds);
     if (isFav) {

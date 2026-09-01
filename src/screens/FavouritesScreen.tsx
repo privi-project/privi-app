@@ -22,6 +22,7 @@ import {
 } from '@/services/businesses';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationDot } from '@/hooks/useNotificationDot';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function FavouritesScreen() {
   const router = useRouter();
@@ -77,6 +78,7 @@ export default function FavouritesScreen() {
 
   const handleRemove = async (businessId: string) => {
     if (!user) return;
+    triggerHaptic();
     const previous = favourites;
     setFavourites(favourites.filter((f) => f.id !== businessId));
     try {

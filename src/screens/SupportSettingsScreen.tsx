@@ -9,6 +9,7 @@ import {
   ChevronRightIcon,
   HelpIcon,
   SunIcon,
+  VibrateIcon,
   StorefrontIcon,
   TagIcon,
   BellIcon,
@@ -21,6 +22,7 @@ import {
 import { fetchAppLinks } from '@/services/appLinks';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { useThemeStore } from '@/store/theme';
+import { useHapticsStore } from '@/store/haptics';
 import { useAuthStore } from '@/store/auth';
 
 export default function SupportSettingsScreen() {
@@ -30,6 +32,8 @@ export default function SupportSettingsScreen() {
   const isDark = colorScheme === 'dark';
   const themeOverride = useThemeStore((s) => s.override);
   const setThemeOverride = useThemeStore((s) => s.setOverride);
+  const hapticsEnabled = useHapticsStore((s) => s.enabled);
+  const setHapticsEnabled = useHapticsStore((s) => s.setEnabled);
 
   const [loading, setLoading] = useState(true);
   // Default to all-on rather than null — an unauthenticated/no-profile
@@ -130,6 +134,15 @@ export default function SupportSettingsScreen() {
             thumbColor={COLORS.ivory}
           />
         </View>
+        <ToggleRow
+          icon={<VibrateIcon color={COLORS.gold} size={20} />}
+          label="Haptic Feedback"
+          subtitle="A quick, light vibration when you favourite a business or select an offer"
+          value={hapticsEnabled}
+          onChange={setHapticsEnabled}
+          textColor={textColor}
+          subColor={subColor}
+        />
 
         <View style={styles.divider} />
 

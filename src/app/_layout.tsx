@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
+import { useHapticsStore } from '@/store/haptics';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { hasCompletedLocationSetup } from '@/utils/firstLaunch';
 import { SplashAnimation } from '@/components/SplashAnimation';
@@ -24,6 +25,7 @@ export default function RootLayout() {
   const setUser = useAuthStore((s) => s.setUser);
   const setLoading = useAuthStore((s) => s.setLoading);
   const hydrateTheme = useThemeStore((s) => s.hydrate);
+  const hydrateHaptics = useHapticsStore((s) => s.hydrate);
 
   // Owned here (not inside Welcome/Home) because it needs to visually
   // persist across the actual navigation to Home — a screen-local overlay
@@ -32,6 +34,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     hydrateTheme();
+    hydrateHaptics();
   }, []);
 
   useEffect(() => {

@@ -38,6 +38,7 @@ import {
   getMemberLocation,
   formatOpeningHoursToday,
 } from '@/services/businesses';
+import { triggerHaptic } from '@/lib/haptics';
 import { OfferSummary, fetchBusinessOffers } from '@/services/offers';
 import { openDirections } from '@/utils/mapsHandoff';
 import { useAuthStore } from '@/store/auth';
@@ -125,6 +126,7 @@ export default function BusinessScreen() {
 
   const handleToggleFavourite = async () => {
     if (!user || !business) return;
+    triggerHaptic();
     const next = !isFavourite;
     setIsFavourite(next);
     try {
@@ -301,7 +303,13 @@ export default function BusinessScreen() {
         ) : (
           <View style={styles.offersList}>
             {offers.map((offer) => (
-              <Pressable key={offer.id} onPress={() => router.push(`/offer/${offer.id}`)}>
+              <Pressable
+                key={offer.id}
+                onPress={() => {
+                  triggerHaptic();
+                  router.push(`/offer/${offer.id}`);
+                }}
+              >
                 <GoldGradientBorder borderWidth={1.5} borderRadius={14} backgroundColor={cardBg}>
                   <View style={styles.offerCardInner}>
                     <View style={styles.offerIcon}>
