@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants/colors';
 import { HomeIcon, MapPinIcon, HeartIcon, AccountIcon } from '@/components/NavIcons';
 import { useAppColorScheme } from '@/hooks/useAppColorScheme';
+import { triggerTabHaptic } from '@/lib/haptics';
 
 // Business/Offer are stack screens pushed on top of a tab, not tabs
 // themselves, so they don't get the Tabs navigator's bar for free — this
@@ -44,7 +45,15 @@ export function BottomNavBar() {
       ]}
     >
       {items.map(({ key, path, Icon }) => (
-        <Pressable key={key} style={styles.item} onPress={() => router.replace(path)} hitSlop={8}>
+        <Pressable
+          key={key}
+          style={styles.item}
+          onPress={() => {
+            triggerTabHaptic();
+            router.replace(path);
+          }}
+          hitSlop={8}
+        >
           <Icon color={iconColor} />
         </Pressable>
       ))}

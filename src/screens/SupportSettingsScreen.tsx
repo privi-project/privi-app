@@ -137,7 +137,7 @@ export default function SupportSettingsScreen() {
         <ToggleRow
           icon={<VibrateIcon color={COLORS.gold} size={20} />}
           label="Haptic Feedback"
-          subtitle="A quick, light vibration when you favourite a business or select an offer"
+          subtitle="A quick, light vibration when you favourite a business or switch tabs"
           value={hapticsEnabled}
           onChange={setHapticsEnabled}
           textColor={textColor}

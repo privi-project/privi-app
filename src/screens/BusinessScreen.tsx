@@ -303,13 +303,7 @@ export default function BusinessScreen() {
         ) : (
           <View style={styles.offersList}>
             {offers.map((offer) => (
-              <Pressable
-                key={offer.id}
-                onPress={() => {
-                  triggerHaptic();
-                  router.push(`/offer/${offer.id}`);
-                }}
-              >
+              <Pressable key={offer.id} onPress={() => router.push(`/offer/${offer.id}`)}>
                 <GoldGradientBorder borderWidth={1.5} borderRadius={14} backgroundColor={cardBg}>
                   <View style={styles.offerCardInner}>
                     <View style={styles.offerIcon}>
