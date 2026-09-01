@@ -94,10 +94,12 @@ export default function AccountScreen() {
                   <CardIcon color={COLORS.gold} size={26} />
                   <View style={styles.cardText}>
                     <Text style={styles.cardTitle}>Continue My Membership</Text>
-                    <Text style={styles.cardSubtitle}>
-                      Your complimentary access ends {continueExpiresOn} — set this up now and
-                      you won&apos;t be charged until then
-                    </Text>
+                    {/* Trimmed 2026-09-01 (founder feedback) — the fuller
+                        "won't be charged until then" reassurance now lives on
+                        the website step this leads to; keeping this subtitle
+                        to one line matches every other card's height instead
+                        of standing out as visibly taller. */}
+                    <Text style={styles.cardSubtitle}>Complimentary access ends {continueExpiresOn}</Text>
                   </View>
                   {continuing ? (
                     <ActivityIndicator color={COLORS.gold} size="small" />
