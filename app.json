@@ -21,6 +21,9 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
       ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBcDzhnJa2Fo4VD4j3kgrAHaF3gFesDkL4"
