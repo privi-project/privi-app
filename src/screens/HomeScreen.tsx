@@ -21,7 +21,7 @@ import { useAppColorScheme } from '@/hooks/useAppColorScheme';
 import { HOME_HEADER_TOP_PADDING } from '@/constants/animations';
 import { Wordmark } from '@/components/BrandMark';
 import { GoldGradientText, GoldGradientBorder } from '@/components/GoldGradient';
-import { BellIcon, SearchIcon, HeartIcon, GlobeIcon } from '@/components/NavIcons';
+import { BellIcon, SearchIcon, HeartIcon, GlobeIcon, GiftIcon } from '@/components/NavIcons';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { NotificationPanel } from '@/components/NotificationPanel';
 import { FilterModal } from '@/components/FilterModal';
@@ -348,12 +348,15 @@ export default function HomeScreen() {
       <View style={styles.header}>
         {/* 2026-08-21: header icon removed (founder decision, once the
             splash animation stopped needing a top-left icon to land on —
-            see SplashAnimation.tsx). Back to a plain 3-way flex balance:
-            an invisible spacer matching the bell's own width on the left,
-            wordmark centred (flex:1) in the middle, bell on the right —
-            no absolute-positioning trick needed now that both sides are
-            simple and equal-width again. */}
-        <View style={styles.headerSpacer} />
+            see SplashAnimation.tsx) — left as a plain spacer since.
+            2026-09-03: that empty slot repurposed for a quiet Referrals
+            shortcut (real growth feature, previously only reachable via
+            Account) rather than staying unused. Same 3-way flex balance
+            as before — gift icon left, wordmark centred, bell right —
+            just no longer literally invisible on the left. */}
+        <Pressable onPress={() => router.push('/referrals')} hitSlop={12} style={styles.headerSpacer}>
+          <GiftIcon color={COLORS.gold} />
+        </Pressable>
         <Pressable onPress={resetToDefaultHome} hitSlop={8} style={styles.headerWordmark}>
           <Wordmark size="sm" on={isDark ? 'dark' : 'light'} />
         </Pressable>
