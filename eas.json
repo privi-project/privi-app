@@ -15,7 +15,13 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildArtifactPaths": [
+          "android/app/build/outputs/**/*.{apk,aab}",
+          "android/app/build/outputs/mapping/**/mapping.txt"
+        ]
+      }
     }
   },
   "submit": {
